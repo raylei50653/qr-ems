@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentList, updateEquipment, createEquipment } from '../../api/equipment';
 import type { Equipment } from '../../types';
-import { ArrowLeft, Box, Edit, Plus, X, Save, Search } from 'lucide-react';
+import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const CATEGORIES = [
+  { value: '', label: '所有類別' },
   { value: 'LAPTOP', label: 'Laptop' },
   { value: 'MONITOR', label: 'Monitor' },
   { value: 'PERIPHERALS', label: 'Peripherals' },
@@ -20,6 +21,30 @@ const CATEGORIES = [
 ];
 
 const STATUSES = [
+  { value: '', label: '所有狀態' },
+  { value: 'AVAILABLE', label: '可借用' },
+  { value: 'BORROWED', label: '已借出' },
+  { value: 'PENDING_RETURN', label: '待歸還' },
+  { value: 'MAINTENANCE', label: '維護中' },
+  { value: 'LOST', label: '遺失' },
+  { value: 'DISPOSED', label: '已報廢' },
+];
+
+const EDIT_CATEGORIES = [
+  { value: 'LAPTOP', label: 'Laptop' },
+  { value: 'MONITOR', label: 'Monitor' },
+  { value: 'PERIPHERALS', label: 'Peripherals' },
+  { value: 'AUDIO_VIDEO', label: 'Audio/Video' },
+  { value: 'FURNITURE', label: 'Furniture' },
+  { value: 'DEV_BOARD', label: 'Development Board' },
+  { value: 'TABLET', label: 'Tablet' },
+  { value: 'PHONE', label: 'Phone' },
+  { value: 'NETWORK', label: 'Network Equipment' },
+  { value: 'TOOLS', label: 'Tools' },
+  { value: 'OTHER', label: 'Other' },
+];
+
+const EDIT_STATUSES = [
   { value: 'AVAILABLE', label: '可借用' },
   { value: 'BORROWED', label: '已借出' },
   { value: 'PENDING_RETURN', label: '待歸還' },
@@ -33,14 +58,16 @@ export const EquipmentManagement = () => {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [status, setStatus] = useState('');
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Partial<Equipment> | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['equipment', page, search],
-    queryFn: () => getEquipmentList(page, search),
+    queryKey: ['equipment', page, search, category, status],
+    queryFn: () => getEquipmentList(page, search, category, status),
   });
 
   const updateMutation = useMutation({
@@ -107,16 +134,46 @@ export const EquipmentManagement = () => {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Search */}
-        <div className="mb-6 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="搜尋設備名稱或描述..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
+        {/* Search and Filter */}
+        <div className="mb-6 flex flex-col md:flex-row gap-3">
+            <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <input
+                type="text"
+                placeholder="搜尋設備名稱或描述..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+            </div>
+            
+            <div className="flex gap-2">
+                <div className="relative">
+                    <select
+                        value={category}
+                        onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+                        className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded-lg leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                        {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                        <Filter className="h-3 w-3" />
+                    </div>
+                </div>
+
+                <div className="relative">
+                    <select
+                        value={status}
+                        onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+                        className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded-lg leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                        {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                        <Filter className="h-3 w-3" />
+                    </div>
+                </div>
+            </div>
         </div>
 
         {isLoading ? (
@@ -205,7 +262,7 @@ export const EquipmentManagement = () => {
                                 value={editingItem.category || 'OTHER'}
                                 onChange={e => setEditingItem({...editingItem, category: e.target.value})}
                             >
-                                {CATEGORIES.map(c => (
+                                {EDIT_CATEGORIES.map(c => (
                                     <option key={c.value} value={c.value}>{c.label}</option>
                                 ))}
                             </select>
@@ -218,7 +275,7 @@ export const EquipmentManagement = () => {
                                 value={editingItem.status || 'AVAILABLE'}
                                 onChange={e => setEditingItem({...editingItem, status: e.target.value})}
                             >
-                                {STATUSES.map(s => (
+                                {EDIT_STATUSES.map(s => (
                                     <option key={s.value} value={s.value}>{s.label}</option>
                                 ))}
                             </select>
