@@ -1,0 +1,7 @@
+tunnel: f2881b4d-72d0-466b-ae6c-44cbc0ba3ca0
+credentials-file: /etc/cloudflared/creds.json
+
+ingress:
+  - hostname: qrems.raylei-lab.com
+    service: http://frontend:5173
+  - service: http_status:404

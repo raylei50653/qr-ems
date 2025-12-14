@@ -1,0 +1,22 @@
+# Environment variables
+.env
+.env.*
+.venv/
+
+# Cloudflare Tunnel credentials
+tunnel_creds.json
+
+# Database
+db.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE specific files
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
