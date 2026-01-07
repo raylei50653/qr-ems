@@ -50,10 +50,11 @@ services:
   tunnel:
     image: cloudflare/cloudflared:latest
     restart: always
+    environment:
+      - TUNNEL_TOKEN=eyJhIjoiNjIwZTA2ZmI5NzI5Y2ZmMWE2YzNlMWQ4YzQ3Mzk1MDMiLCJ0IjoiZjI4ODFiNGQtNzJkMC00NjZiLWFlNmMtNDRjYmMwYmEzY2EwIiwicyI6IjVaVldhVDZ3NFFlZENtOXlMYkhwclA0MjlPRUdoelhZSlVrZEM1cEpxRkk9In0=
     command: tunnel run
     volumes:
       - ./tunnel_config.yml:/etc/cloudflared/config.yml
-      - ./tunnel_creds.json:/etc/cloudflared/creds.json
     depends_on:
       - frontend
       - backend

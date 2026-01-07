@@ -117,7 +117,7 @@ export const EquipmentManagement = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow p-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center">
-            <button onClick={() => navigate('/')} className="mr-4 text-gray-600 hover:text-primary">
+            <button onClick={() => navigate('/', { replace: true })} className="mr-4 text-gray-600 hover:text-primary">
                 <ArrowLeft className="h-6 w-6" />
             </button>
             <h1 className="text-xl font-bold flex items-center text-gray-800">

@@ -61,6 +61,10 @@ export const EquipmentDetailPage = () => {
     }
   };
 
+  const handleBack = () => {
+    navigate('/', { replace: true });
+  };
+
   // Determine if the return button should be shown and enabled
   const showReturnButton = equipment?.status === 'BORROWED' && equipment?.current_possession?.id === loggedInUser?.id;
 
@@ -73,7 +77,7 @@ export const EquipmentDetailPage = () => {
         <div className="bg-white rounded-lg shadow overflow-hidden">
             {/* Header */}
             <div className="bg-primary px-6 py-4 flex items-center text-white">
-            <button onClick={() => navigate(-1)} className="mr-4 hover:bg-white/10 p-1 rounded">
+            <button onClick={handleBack} className="mr-4 hover:bg-white/10 p-1 rounded">
                 <ArrowLeft className="h-6 w-6" />
             </button>
             <h1 className="text-xl font-bold">設備詳情</h1>

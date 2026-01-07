@@ -42,6 +42,10 @@ export const BorrowPage = () => {
     });
   };
 
+  const handleBack = () => {
+    navigate('/', { replace: true });
+  };
+
   // Calculate min date (today)
   const today = new Date().toISOString().split('T')[0];
 
@@ -52,7 +56,7 @@ export const BorrowPage = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <div className="bg-white p-4 shadow-sm flex items-center sticky top-0 z-10">
-         <button onClick={() => navigate(-1)} className="mr-4 p-1 rounded-full hover:bg-gray-100">
+         <button onClick={handleBack} className="mr-4 p-1 rounded-full hover:bg-gray-100">
             <ArrowLeft className="h-6 w-6 text-gray-600" />
          </button>
          <h1 className="text-lg font-bold text-gray-800">借用設備</h1>
