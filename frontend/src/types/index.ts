@@ -18,11 +18,16 @@ export interface Equipment {
   name: string;
   description: string;
   status: EquipmentStatus;
+  category: string;
+  zone?: string;
+  cabinet?: string;
+  number?: string;
+  image?: string;
   rdf_metadata?: Record<string, any>;
   current_possession?: {
-    user_id: number;
+    id: number;
     username: string;
-    due_date: string;
+    due_date?: string;
   };
 }
 
@@ -35,8 +40,10 @@ export interface Transaction {
   status: TransactionStatus;
   due_date?: string;
   reason?: string;
+  image?: string;
   created_at: string;
   completed_at?: string;
+  user_detail?: User; // Added user_detail for history display
 }
 
 // --- API Responses ---

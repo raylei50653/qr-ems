@@ -1,15 +1,9 @@
 tunnel: f2881b4d-72d0-466b-ae6c-44cbc0ba3ca0
-# credentials-file: /etc/cloudflared/creds.json # We use token env var now
+# We rely on Vite Proxy to route /api (including /api/media) to the backend container.
+# This simplifies the tunnel configuration and ensures consistency.
 
 ingress:
-  # Route API requests to the backend container
-  - hostname: qrems.raylei-lab.com
-    path: /api*
-    service: http://backend:8000
-  
-  # Route everything else to the frontend container
   - hostname: qrems.raylei-lab.com
     service: http://frontend:5173
   
-  # Catch-all
   - service: http_status:404

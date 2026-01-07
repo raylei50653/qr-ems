@@ -19,12 +19,18 @@ export const getEquipmentHistory = async (uuid: string) => {
   return data;
 };
 
-export const createEquipment = async (data: Partial<Equipment>) => {
-  const { data: response } = await client.post<Equipment>('/equipment/', data);
+export const createEquipment = async (data: Partial<Equipment> | FormData) => {
+  const isFormData = data instanceof FormData;
+  const { data: response } = await client.post<Equipment>('/equipment/', data, {
+    headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+  });
   return response;
 };
 
-export const updateEquipment = async (uuid: string, data: Partial<Equipment>) => {
-  const { data: response } = await client.patch<Equipment>(`/equipment/${uuid}/`, data);
+export const updateEquipment = async (uuid: string, data: Partial<Equipment> | FormData) => {
+  const isFormData = data instanceof FormData;
+  const { data: response } = await client.patch<Equipment>(`/equipment/${uuid}/`, data, {
+    headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+  });
   return response;
 };

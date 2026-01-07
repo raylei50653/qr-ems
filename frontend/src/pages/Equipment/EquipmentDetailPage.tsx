@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentDetail, getEquipmentHistory } from '../../api/equipment';
 import { transactionsApi } from '../../api/transactions';
-import { ArrowLeft, Box, Activity, User as UserIcon, History, Clock } from 'lucide-react';
+import { ArrowLeft, Box, Activity, User as UserIcon, History, Clock, MapPin } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
 export const EquipmentDetailPage = () => {
@@ -85,6 +85,18 @@ export const EquipmentDetailPage = () => {
 
             {/* Content */}
             <div className="p-6 space-y-6">
+            
+            {/* Equipment Image */}
+            {equipment.image && (
+                <div className="w-full h-64 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center mb-4 border border-gray-200">
+                    <img 
+                        src={equipment.image} 
+                        alt={equipment.name} 
+                        className="w-full h-full object-contain"
+                    />
+                </div>
+            )}
+
             <div className="flex items-start space-x-4">
                 <div className="bg-blue-100 p-3 rounded-full">
                 <Box className="h-8 w-8 text-blue-600" />
@@ -117,6 +129,19 @@ export const EquipmentDetailPage = () => {
                     {equipment.current_possession?.username || '無'}
                 </div>
                 </div>
+            </div>
+
+            {/* Location Info */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                 <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-1">
+                    <MapPin className="w-4 h-4" /> 存放位置
+                 </h3>
+                 <div className="flex gap-4 text-gray-900 font-medium">
+                    {equipment.zone && <span className="bg-white px-2 py-1 rounded border border-gray-200">{equipment.zone}</span>}
+                    {equipment.cabinet && <span className="bg-white px-2 py-1 rounded border border-gray-200">{equipment.cabinet}</span>}
+                    {equipment.number && <span className="bg-white px-2 py-1 rounded border border-gray-200">{equipment.number}</span>}
+                    {!equipment.zone && !equipment.cabinet && !equipment.number && <span className="text-gray-400 font-normal italic">未指定位置</span>}
+                 </div>
             </div>
 
             {/* QR Code Section */}
@@ -192,7 +217,19 @@ export const EquipmentDetailPage = () => {
                                         備註: {txn.reason}
                                     </div>
                                 )}
-                                <div className="text-xs text-gray-400">
+                                {txn.image && (
+                                    <div className="mt-2">
+                                        <p className="text-xs text-gray-400 mb-1">狀態照片:</p>
+                                        <a href={txn.image} target="_blank" rel="noopener noreferrer">
+                                            <img 
+                                                src={txn.image} 
+                                                alt="Transaction Record" 
+                                                className="h-20 w-auto object-cover rounded border border-gray-200 hover:opacity-90 transition-opacity" 
+                                            />
+                                        </a>
+                                    </div>
+                                )}
+                                <div className="text-xs text-gray-400 mt-1">
                                     狀態: {txn.status === 'COMPLETED' ? '完成' : 
                                            txn.status === 'PENDING_APPROVAL' ? '待審核' : '拒絕'}
                                 </div>

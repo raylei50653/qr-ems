@@ -54,6 +54,12 @@ class Transaction(models.Model):
         blank=True,
         verbose_name=_('Reason')
     )
+    image = models.ImageField(
+        upload_to='transaction_images/',
+        blank=True,
+        null=True,
+        verbose_name=_('Transaction Image')
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

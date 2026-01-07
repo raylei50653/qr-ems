@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentList, updateEquipment, createEquipment } from '../../api/equipment';
 import type { Equipment } from '../../types';
-import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter } from 'lucide-react';
+import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const CATEGORIES = [
@@ -64,6 +64,7 @@ export const EquipmentManagement = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Partial<Equipment> | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['equipment', page, search, category, status],
@@ -71,22 +72,24 @@ export const EquipmentManagement = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ uuid, data }: { uuid: string; data: Partial<Equipment> }) => updateEquipment(uuid, data),
+    mutationFn: ({ uuid, data }: { uuid: string; data: Partial<Equipment> | FormData }) => updateEquipment(uuid, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
       setIsModalOpen(false);
       setEditingItem(null);
+      setSelectedFile(null);
       alert('更新成功');
     },
     onError: (err: any) => alert('更新失敗: ' + err.message)
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: Partial<Equipment>) => createEquipment(data),
+    mutationFn: (data: Partial<Equipment> | FormData) => createEquipment(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
       setIsModalOpen(false);
       setEditingItem(null);
+      setSelectedFile(null);
       alert('建立成功');
     },
     onError: (err: any) => alert('建立失敗: ' + err.message)
@@ -94,11 +97,21 @@ export const EquipmentManagement = () => {
 
   const handleEdit = (item: Equipment) => {
     setEditingItem(item);
+    setSelectedFile(null);
     setIsModalOpen(true);
   };
 
   const handleCreate = () => {
-    setEditingItem({ name: '', description: '', category: 'OTHER', status: 'AVAILABLE' });
+    setEditingItem({ 
+        name: '', 
+        description: '', 
+        category: 'OTHER', 
+        status: 'AVAILABLE',
+        zone: '',
+        cabinet: '',
+        number: ''
+    });
+    setSelectedFile(null);
     setIsModalOpen(true);
   };
 
@@ -106,10 +119,23 @@ export const EquipmentManagement = () => {
     e.preventDefault();
     if (!editingItem) return;
 
+    const formData = new FormData();
+    formData.append('name', editingItem.name || '');
+    formData.append('description', editingItem.description || '');
+    formData.append('category', editingItem.category || 'OTHER');
+    formData.append('status', editingItem.status || 'AVAILABLE');
+    formData.append('zone', editingItem.zone || '');
+    formData.append('cabinet', editingItem.cabinet || '');
+    formData.append('number', editingItem.number || '');
+
+    if (selectedFile) {
+        formData.append('image', selectedFile);
+    }
+
     if (editingItem.uuid) {
-      updateMutation.mutate({ uuid: editingItem.uuid, data: editingItem });
+      updateMutation.mutate({ uuid: editingItem.uuid, data: formData });
     } else {
-      createMutation.mutate(editingItem);
+      createMutation.mutate(formData);
     }
   };
 
@@ -222,8 +248,8 @@ export const EquipmentManagement = () => {
       {/* Edit Modal */}
       {isModalOpen && editingItem && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
                     <h3 className="text-lg font-bold text-gray-800">
                         {editingItem.uuid ? '編輯設備' : '新增設備'}
                     </h3>
@@ -232,57 +258,139 @@ export const EquipmentManagement = () => {
                     </button>
                 </div>
                 
-                <form onSubmit={handleSave} className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">設備名稱</label>
-                        <input 
-                            type="text" 
-                            required
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                            value={editingItem.name || ''}
-                            onChange={e => setEditingItem({...editingItem, name: e.target.value})}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
-                        <textarea 
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                            rows={3}
-                            value={editingItem.description || ''}
-                            onChange={e => setEditingItem({...editingItem, description: e.target.value})}
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={handleSave} className="flex flex-col overflow-hidden flex-1">
+                    <div className="p-6 space-y-4 overflow-y-auto flex-1">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">類別</label>
-                            <select 
+                            <label className="block text-sm font-medium text-gray-700 mb-1">設備名稱</label>
+                            <input 
+                                type="text" 
+                                required
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                                value={editingItem.category || 'OTHER'}
-                                onChange={e => setEditingItem({...editingItem, category: e.target.value})}
-                            >
-                                {EDIT_CATEGORIES.map(c => (
-                                    <option key={c.value} value={c.value}>{c.label}</option>
-                                ))}
-                            </select>
+                                value={editingItem.name || ''}
+                                onChange={e => setEditingItem({...editingItem, name: e.target.value})}
+                            />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">狀態</label>
-                            <select 
+                            <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
+                            <textarea 
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                                value={editingItem.status || 'AVAILABLE'}
-                                onChange={e => setEditingItem({...editingItem, status: e.target.value})}
-                            >
-                                {EDIT_STATUSES.map(s => (
-                                    <option key={s.value} value={s.value}>{s.label}</option>
-                                ))}
-                            </select>
+                                rows={3}
+                                value={editingItem.description || ''}
+                                onChange={e => setEditingItem({...editingItem, description: e.target.value})}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">區 (Zone)</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={editingItem.zone || ''}
+                                    onChange={e => setEditingItem({...editingItem, zone: e.target.value})}
+                                    placeholder="例如: A區"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">櫃 (Cabinet)</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={editingItem.cabinet || ''}
+                                    onChange={e => setEditingItem({...editingItem, cabinet: e.target.value})}
+                                    placeholder="例如: 1號櫃"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">號 (Number)</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={editingItem.number || ''}
+                                    onChange={e => setEditingItem({...editingItem, number: e.target.value})}
+                                    placeholder="例如: 第3層"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">設備圖片</label>
+                            <div className="mt-1 flex items-center gap-4">
+                                <label className="cursor-pointer flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors bg-gray-50">
+                                    <input 
+                                        type="file" 
+                                        accept="image/*"
+                                        capture="environment"
+                                        className="hidden"
+                                        onChange={e => {
+                                            if (e.target.files && e.target.files[0]) {
+                                                setSelectedFile(e.target.files[0]);
+                                            }
+                                        }}
+                                    />
+                                    {selectedFile ? (
+                                        <img src={URL.createObjectURL(selectedFile)} alt="Preview" className="h-full object-contain" />
+                                    ) : editingItem.image ? (
+                                        <div className="relative h-full w-full flex items-center justify-center group">
+                                             <img src={editingItem.image} alt="Current" className="h-full object-contain opacity-50 group-hover:opacity-30 transition-opacity" />
+                                             <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
+                                                <Camera className="h-8 w-8 mb-2" />
+                                                <span className="text-sm font-medium">點擊更換照片</span>
+                                             </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center text-gray-500">
+                                            <Camera className="h-8 w-8 mb-2" />
+                                            <span className="text-sm">點擊拍攝或上傳照片</span>
+                                        </div>
+                                    )}
+                                </label>
+                                {(selectedFile || editingItem.image) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedFile(null);
+                                        }}
+                                        className="text-sm text-red-500 hover:text-red-700 whitespace-nowrap self-start mt-2"
+                                        hidden={!selectedFile} 
+                                    >
+                                        重置選擇
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">類別</label>
+                                <select 
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={editingItem.category || 'OTHER'}
+                                    onChange={e => setEditingItem({...editingItem, category: e.target.value})}
+                                >
+                                    {EDIT_CATEGORIES.map(c => (
+                                        <option key={c.value} value={c.value}>{c.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">狀態</label>
+                                <select 
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={editingItem.status || 'AVAILABLE'}
+                                    onChange={e => setEditingItem({...editingItem, status: e.target.value})}
+                                >
+                                    {EDIT_STATUSES.map(s => (
+                                        <option key={s.value} value={s.value}>{s.label}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="pt-4 flex justify-end gap-3">
+                    <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 shrink-0">
                         <button 
                             type="button"
                             onClick={() => setIsModalOpen(false)}

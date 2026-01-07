@@ -41,6 +41,14 @@ class Equipment(models.Model):
         verbose_name="類別"
     )
 
+    # Location Information
+    zone = models.CharField(max_length=50, blank=True, verbose_name="區")
+    cabinet = models.CharField(max_length=50, blank=True, verbose_name="櫃")
+    number = models.CharField(max_length=50, blank=True, verbose_name="號")
+
+    # Equipment Image
+    image = models.ImageField(upload_to='equipment_images/', blank=True, null=True, verbose_name="設備圖片")
+
     rdf_metadata = models.JSONField(default=dict, blank=True, verbose_name="RDF元數據")
     
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="建立時間")

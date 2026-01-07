@@ -19,6 +19,11 @@ class TransactionViewSet(viewsets.ModelViewSet):
         equipment_uuid = request.data.get('equipment_uuid')
         due_date = request.data.get('due_date')
         reason = request.data.get('reason', '')
+        image = request.data.get('image')
+
+        # Handle FormData string conversions
+        if due_date in ['undefined', 'null', '']:
+            due_date = None
 
         if not equipment_uuid:
             raise ValidationError("Equipment UUID is required")
@@ -37,7 +42,8 @@ class TransactionViewSet(viewsets.ModelViewSet):
                     action=Transaction.Action.BORROW,
                     status=Transaction.Status.COMPLETED,
                     due_date=due_date,
-                    reason=reason
+                    reason=reason,
+                    image=image
                 )
 
                 # Update Equipment

@@ -10,14 +10,21 @@ class AttachmentSerializer(serializers.ModelSerializer):
 class EquipmentSerializer(serializers.ModelSerializer):
     attachments = AttachmentSerializer(many=True, read_only=True)
     current_possession = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
     
     class Meta:
         model = Equipment
         fields = [
             'uuid', 'name', 'description', 'status', 'category',
+            'zone', 'cabinet', 'number', 'image',
             'rdf_metadata', 'created_at', 'updated_at',
             'attachments', 'current_possession'
         ]
+
+    def get_image(self, obj):
+        if obj.image:
+            return obj.image.url
+        return None
 
     def get_current_possession(self, obj):
         # We assume the 'transactions' related name is available

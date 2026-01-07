@@ -4,6 +4,7 @@ export interface BorrowRequest {
   equipment_uuid: string;
   due_date?: string; // ISO date string
   reason?: string;
+  image?: File;
 }
 
 export interface ReturnRequest {
@@ -18,6 +19,7 @@ export interface Transaction {
   reason: string;
   equipment: string; // uuid
   user: number; // user id
+  image?: string;
   equipment_detail?: {
     uuid: string;
     name: string;
@@ -44,8 +46,11 @@ export const transactionsApi = {
     return Array.isArray(response.data) ? response.data : [];
   },
 
-  borrow: async (data: BorrowRequest): Promise<Transaction> => {
-    const response = await client.post('/transactions/borrow/', data);
+  borrow: async (data: BorrowRequest | FormData): Promise<Transaction> => {
+    const isFormData = data instanceof FormData;
+    const response = await client.post('/transactions/borrow/', data, {
+        headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    });
     return response.data;
   },
 

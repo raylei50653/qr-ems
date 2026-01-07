@@ -3,13 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getEquipmentDetail } from '../../api/equipment';
 import { transactionsApi } from '../../api/transactions';
-import { ArrowLeft, Calendar, FileText, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, AlertCircle, Camera } from 'lucide-react';
 
 export const BorrowPage = () => {
   const { uuid } = useParams<{ uuid: string }>();
   const navigate = useNavigate();
   const [dueDate, setDueDate] = useState('');
   const [reason, setReason] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Fetch Equipment Details
   const { data: equipment, isLoading, error } = useQuery({
@@ -35,11 +36,15 @@ export const BorrowPage = () => {
     e.preventDefault();
     if (!uuid) return;
 
-    borrowMutation.mutate({
-      equipment_uuid: uuid,
-      due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
-      reason: reason,
-    });
+    const formData = new FormData();
+    formData.append('equipment_uuid', uuid);
+    if (dueDate) formData.append('due_date', new Date(dueDate).toISOString());
+    formData.append('reason', reason || '');
+    if (selectedFile) {
+        formData.append('image', selectedFile);
+    }
+
+    borrowMutation.mutate(formData);
   };
 
   const handleBack = () => {
@@ -124,6 +129,49 @@ export const BorrowPage = () => {
                   placeholder="請輸入借用用途..."
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
                 />
+             </div>
+           </div>
+
+           {/* Image Upload */}
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">
+                設備狀態照片 (選填)
+             </label>
+             <div className="mt-1 flex items-center gap-4">
+                <label className="cursor-pointer flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                    <input 
+                        type="file" 
+                        accept="image/*" 
+                        capture="environment"
+                        className="hidden"
+                        onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                                setSelectedFile(e.target.files[0]);
+                            }
+                        }} 
+                    />
+                    {selectedFile ? (
+                        <img 
+                            src={URL.createObjectURL(selectedFile)} 
+                            alt="Preview" 
+                            className="h-full object-contain" 
+                        />
+                    ) : (
+                        <div className="flex flex-col items-center text-gray-500">
+                            <Camera className="h-8 w-8 mb-2" />
+                            <span className="text-sm">點擊拍攝或上傳照片</span>
+                        </div>
+                    )}
+                </label>
+                {selectedFile && (
+                    <button
+                        type="button"
+                        onClick={() => setSelectedFile(null)}
+                        className="text-sm text-red-500 hover:text-red-700 whitespace-nowrap"
+                    >
+                        移除
+                    </button>
+                )}
              </div>
            </div>
 

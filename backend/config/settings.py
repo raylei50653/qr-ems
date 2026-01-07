@@ -118,7 +118,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/api/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
@@ -155,3 +155,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://qrems.raylei-lab.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+# Proxy Settings
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
