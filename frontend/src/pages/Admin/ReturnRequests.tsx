@@ -14,18 +14,12 @@ export const ReturnRequests = () => {
   const { data: transactions, isLoading } = useQuery({
     queryKey: ['transactions', filter],
     queryFn: async () => {
-      // In a real app, pass filter to API. 
-      // Here we fetch all (or recent) and filter client side if API doesn't support convenient status filter yet.
-      const allTxns = await transactionsApi.getTransactions();
-      
-      // Client-side sort/filter for this demo
-      let filtered = allTxns;
+      const params: any = {};
       if (filter === 'PENDING_APPROVAL') {
-        filtered = allTxns.filter(t => t.status === 'PENDING_APPROVAL');
+        params.status = 'PENDING_APPROVAL';
       }
-      
-      // Sort by date desc
-      return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      // Backend now handles filtering and sorting (default by -created_at)
+      return await transactionsApi.getTransactions(params);
     },
   });
 

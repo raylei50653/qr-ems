@@ -53,6 +53,10 @@ const EDIT_STATUSES = [
   { value: 'DISPOSED', label: '已報廢' },
 ];
 
+const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
+const LOCATION_CABINETS = Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']);
+const LOCATION_NUMBERS = Array.from({ length: 10 }, (_, i) => `${i + 1}號`).concat(['其他']);
+
 export const EquipmentManagement = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -284,33 +288,36 @@ export const EquipmentManagement = () => {
                         <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">區 (Zone)</label>
-                                <input 
-                                    type="text" 
+                                <select 
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={editingItem.zone || ''}
                                     onChange={e => setEditingItem({...editingItem, zone: e.target.value})}
-                                    placeholder="例如: A區"
-                                />
+                                >
+                                    <option value="">選擇區</option>
+                                    {LOCATION_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">櫃 (Cabinet)</label>
-                                <input 
-                                    type="text" 
+                                <select 
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={editingItem.cabinet || ''}
                                     onChange={e => setEditingItem({...editingItem, cabinet: e.target.value})}
-                                    placeholder="例如: 1號櫃"
-                                />
+                                >
+                                    <option value="">選擇櫃</option>
+                                    {LOCATION_CABINETS.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">號 (Number)</label>
-                                <input 
-                                    type="text" 
+                                <select 
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={editingItem.number || ''}
                                     onChange={e => setEditingItem({...editingItem, number: e.target.value})}
-                                    placeholder="例如: 第3層"
-                                />
+                                >
+                                    <option value="">選擇號</option>
+                                    {LOCATION_NUMBERS.map(n => <option key={n} value={n}>{n}</option>)}
+                                </select>
                             </div>
                         </div>
 
