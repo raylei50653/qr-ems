@@ -2,6 +2,18 @@ import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+class Category(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="類別名稱")
+    description = models.TextField(blank=True, verbose_name="描述")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "設備類別"
+        verbose_name_plural = "設備類別列表"
+
+    def __str__(self):
+        return self.name
+
 class Equipment(models.Model):
     class Status(models.TextChoices):
         AVAILABLE = 'AVAILABLE', 'Available'
@@ -23,23 +35,12 @@ class Equipment(models.Model):
         verbose_name="狀態"
     )
 
-    class Category(models.TextChoices):
-        LAPTOP = 'LAPTOP', 'Laptop'
-        MONITOR = 'MONITOR', 'Monitor'
-        PERIPHERALS = 'PERIPHERALS', 'Peripherals'
-        AUDIO_VIDEO = 'AUDIO_VIDEO', 'Audio/Video'
-        FURNITURE = 'FURNITURE', 'Furniture'
-        DEV_BOARD = 'DEV_BOARD', 'Development Board'
-        TABLET = 'TABLET', 'Tablet'
-        PHONE = 'PHONE', 'Phone'
-        NETWORK = 'NETWORK', 'Network Equipment'
-        TOOLS = 'TOOLS', 'Tools'
-        OTHER = 'OTHER', 'Other'
-
-    category = models.CharField(
-        max_length=50,
-        choices=Category.choices,
-        default=Category.OTHER,
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='equipment',
         verbose_name="類別"
     )
 
@@ -63,6 +64,10 @@ class Equipment(models.Model):
     zone = models.CharField(max_length=50, blank=True, verbose_name="區")
     cabinet = models.CharField(max_length=50, blank=True, verbose_name="櫃")
     number = models.CharField(max_length=50, blank=True, verbose_name="號")
+
+    target_zone = models.CharField(max_length=50, blank=True, verbose_name="目標區")
+    target_cabinet = models.CharField(max_length=50, blank=True, verbose_name="目標櫃")
+    target_number = models.CharField(max_length=50, blank=True, verbose_name="目標號")
 
     # Equipment Image
     image = models.ImageField(upload_to='equipment_images/', blank=True, null=True, verbose_name="設備圖片")

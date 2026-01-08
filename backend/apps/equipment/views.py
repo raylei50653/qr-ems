@@ -4,10 +4,11 @@ from django.http import HttpResponse
 from rest_framework import viewsets, permissions, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Equipment
-from .serializers import EquipmentSerializer
+from .models import Equipment, Category
+from .serializers import EquipmentSerializer, CategorySerializer
 from apps.users.models import User
 from apps.transactions.serializers import TransactionSerializer
+from apps.transactions.models import Transaction
 from decouple import config
 
 class IsManagerOrReadOnly(permissions.BasePermission):
@@ -18,6 +19,13 @@ class IsManagerOrReadOnly(permissions.BasePermission):
             request.user.role in [User.Role.MANAGER, User.Role.ADMIN] or request.user.is_staff
         )
 
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [IsManagerOrReadOnly]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name']
+
 class EquipmentViewSet(viewsets.ModelViewSet):
     queryset = Equipment.objects.all()
     serializer_class = EquipmentSerializer
@@ -27,6 +35,35 @@ class EquipmentViewSet(viewsets.ModelViewSet):
     ordering_fields = ['name', 'status', 'created_at']
     ordering = ['-created_at']
     lookup_field = 'uuid'
+
+    def perform_update(self, serializer):
+        old_status = self.get_object().status
+        instance = serializer.save()
+        new_status = instance.status
+        
+        # Detect movement related status changes
+        if old_status != new_status:
+            action_type = None
+            if new_status == Equipment.Status.IN_TRANSIT:
+                action_type = 'MOVE_START'
+            elif old_status == Equipment.Status.IN_TRANSIT and new_status == Equipment.Status.AVAILABLE:
+                action_type = 'MOVE_CONFIRM'
+            
+            if action_type:
+                # Create a transaction record with location snapshot
+                image = self.request.FILES.get('transaction_image')
+                Transaction.objects.create(
+                    equipment=instance,
+                    user=self.request.user,
+                    action=action_type,
+                    status=Transaction.Status.COMPLETED,
+                    image=image,
+                    location=instance.location,
+                    zone=instance.zone,
+                    cabinet=instance.cabinet,
+                    number=instance.number,
+                    reason=f"Status changed from {old_status} to {new_status}"
+                )
 
     def get_queryset(self):
         queryset = Equipment.objects.all()
@@ -74,3 +111,12 @@ class EquipmentViewSet(viewsets.ModelViewSet):
         img.save(buffer, format="PNG")
         
         return HttpResponse(buffer.getvalue(), content_type="image/png")
+
+    @action(detail=False, methods=['post'], url_path='bulk-delete')
+    def bulk_delete(self, request):
+        uuids = request.data.get('uuids', [])
+        if not uuids:
+            return Response({'detail': 'No UUIDs provided'}, status=400)
+        
+        deleted_count, _ = Equipment.objects.filter(uuid__in=uuids).delete()
+        return Response({'detail': f'Successfully deleted {deleted_count} items'}, status=200)

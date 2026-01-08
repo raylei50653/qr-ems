@@ -1,7 +1,12 @@
 from rest_framework import serializers
-from .models import Equipment, Attachment
+from .models import Equipment, Attachment, Category
 from apps.users.serializers import UserSerializer
 from apps.locations.serializers import LocationSerializer
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'description', 'created_at']
 
 class AttachmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,15 +19,17 @@ class EquipmentSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     location_details = LocationSerializer(source='location', read_only=True)
     target_location_details = LocationSerializer(source='target_location', read_only=True)
+    category_details = CategorySerializer(source='category', read_only=True)
     
     class Meta:
         model = Equipment
         fields = [
-            'uuid', 'name', 'description', 'status', 'category',
+            'uuid', 'name', 'description', 'status', 'category', 'category_details',
             'location', 'location_details',
             'target_location', 'target_location_details',
-            'zone', 'cabinet', 'number', 'image',
-            'rdf_metadata', 'created_at', 'updated_at',
+            'zone', 'cabinet', 'number',
+            'target_zone', 'target_cabinet', 'target_number',
+            'image', 'rdf_metadata', 'created_at', 'updated_at',
             'attachments', 'current_possession'
         ]
 

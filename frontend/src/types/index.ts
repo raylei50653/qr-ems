@@ -5,6 +5,13 @@ export type TransactionStatus = 'COMPLETED' | 'PENDING_APPROVAL' | 'REJECTED';
 
 // --- Models ---
 
+export interface Category {
+  id: number;
+  name: string;
+  description: string;
+  created_at: string;
+}
+
 export interface User {
   id: number;
   username: string;
@@ -29,7 +36,8 @@ export interface Equipment {
   name: string;
   description: string;
   status: EquipmentStatus;
-  category: string;
+  category?: number; // Store ID
+  category_details?: Category;
   location?: string;
   location_details?: Location;
   target_location?: string;
@@ -37,6 +45,9 @@ export interface Equipment {
   zone?: string;
   cabinet?: string;
   number?: string;
+  target_zone?: string;
+  target_cabinet?: string;
+  target_number?: string;
   image?: string;
   rdf_metadata?: Record<string, any>;
   current_possession?: {
@@ -58,7 +69,12 @@ export interface Transaction {
   image?: string;
   created_at: string;
   completed_at?: string;
-  user_detail?: User; // Added user_detail for history display
+  user_detail?: User;
+  location?: string;
+  location_details?: Location;
+  zone?: string;
+  cabinet?: string;
+  number?: string;
 }
 
 // --- API Responses ---

@@ -5,6 +5,10 @@ import { getLocationDetail } from '../../../api/locations';
 import { getEquipmentDetail, updateEquipment } from '../../../api/equipment';
 import { ArrowLeft, MapPin, Box, CheckCircle, QrCode } from 'lucide-react';
 
+const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
+const LOCATION_CABINETS = Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']);
+const LOCATION_NUMBERS = Array.from({ length: 10 }, (_, i) => `${i + 1}號`).concat(['其他']);
+
 export const LocationConfirmPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -14,6 +18,11 @@ export const LocationConfirmPage = () => {
   const [equipmentId, setAddEquipmentId] = useState('');
   const [scannedEquipment, setScannedEquipment] = useState<Equipment | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // New state for detailed location
+  const [zone, setZone] = useState('');
+  const [cabinet, setCabinet] = useState('');
+  const [number, setNumber] = useState('');
 
   const { data: location, isLoading: loadingLocation } = useQuery({
     queryKey: ['location', locationUuid],
@@ -50,6 +59,10 @@ export const LocationConfirmPage = () => {
     try {
       const equipment = await getEquipmentDetail(uuid);
       setScannedEquipment(equipment);
+      // Auto-fill existing details if any
+      setZone(equipment.zone || '');
+      setCabinet(equipment.cabinet || '');
+      setNumber(equipment.number || '');
     } catch (err) {
       setError('找不到該設備，請確認 UUID 是否正確。');
     }
@@ -63,7 +76,22 @@ export const LocationConfirmPage = () => {
       data: { 
           location: locationUuid,
           target_location: null,
+          zone: zone || '',
+          cabinet: cabinet || '',
+          number: number || '',
           status: 'AVAILABLE'
+      }
+    });
+  };
+
+  const handleSetAsTarget = () => {
+    if (!scannedEquipment || !locationUuid) return;
+
+    updateMutation.mutate({
+      uuid: scannedEquipment.uuid,
+      data: { 
+          target_location: locationUuid,
+          status: 'TO_BE_MOVED'
       }
     });
   };
@@ -139,16 +167,68 @@ export const LocationConfirmPage = () => {
                         )}
                     </div>
 
-                    <button
-                        onClick={handleConfirmPlacement}
-                        disabled={updateMutation.isPending}
-                        className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${
-                            isTargetMatch ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
-                        }`}
-                    >
-                        <CheckCircle className="w-5 h-5" />
-                        {updateMutation.isPending ? '提交中...' : '確認放置在此'}
-                    </button>
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">指定具體位置</h3>
+                        <div className="grid grid-cols-3 gap-2">
+                            <div>
+                                <label className="block text-[10px] font-medium text-gray-400 mb-1">區</label>
+                                <select 
+                                    className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={zone}
+                                    onChange={e => setZone(e.target.value)}
+                                >
+                                    <option value="">選擇</option>
+                                    {LOCATION_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-medium text-gray-400 mb-1">櫃</label>
+                                <select 
+                                    className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={cabinet}
+                                    onChange={e => setCabinet(e.target.value)}
+                                >
+                                    <option value="">選擇</option>
+                                    {LOCATION_CABINETS.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-medium text-gray-400 mb-1">號</label>
+                                <select 
+                                    className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={number}
+                                    onChange={e => setNumber(e.target.value)}
+                                >
+                                    <option value="">選擇</option>
+                                    {LOCATION_NUMBERS.map(n => <option key={n} value={n}>{n}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <button
+                            onClick={handleConfirmPlacement}
+                            disabled={updateMutation.isPending}
+                            className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${
+                                isTargetMatch ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+                            }`}
+                        >
+                            <CheckCircle className="w-5 h-5" />
+                            {updateMutation.isPending ? '提交中...' : '確認放置在此'}
+                        </button>
+
+                        {!isTargetMatch && (
+                            <button
+                                onClick={handleSetAsTarget}
+                                disabled={updateMutation.isPending}
+                                className="w-full py-3 rounded-xl font-bold border-2 border-orange-500 text-orange-600 hover:bg-orange-50 transition-all flex items-center justify-center gap-2"
+                            >
+                                <MapPin className="w-5 h-5" />
+                                設為目標目的地
+                            </button>
+                        )}
+                    </div>
 
                     <button 
                         onClick={() => { setScannedEquipment(null); setAddEquipmentId(''); }}

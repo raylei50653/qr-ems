@@ -34,3 +34,11 @@ export const updateEquipment = async (uuid: string, data: Partial<Equipment> | F
   });
   return response;
 };
+
+export const deleteEquipment = async (uuid: string) => {
+  await client.delete(`/equipment/${uuid}/`);
+};
+
+export const bulkDeleteEquipment = async (uuids: string[]) => {
+  await client.post('/equipment/bulk-delete/', { uuids });
+};

@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getLocations, createLocation, updateLocation, deleteLocation } from '../../../api/locations';
 import { getEquipmentList, updateEquipment } from '../../../api/equipment';
-import type { Location, Equipment } from '../../../types';
+import type { Location, Equipment, PaginatedResponse } from '../../../types';
 import { QRCodeSVG } from 'qrcode.react';
 import { Box, Plus, Search, X, ArrowLeft, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import client from '../../../api/client';
-import { PaginatedResponse } from '../../../types';
+
+const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
+const LOCATION_CABINETS = Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']);
+const LOCATION_NUMBERS = Array.from({ length: 10 }, (_, i) => `${i + 1}號`).concat(['其他']);
 
 export const LocationManagement = () => {
   const navigate = useNavigate();
@@ -18,22 +21,24 @@ export const LocationManagement = () => {
   const [showQR, setShowQR] = useState<string | null>(null);
   const [inventoryLocation, setInventoryLocation] = useState<Location | null>(null);
   const [addEquipmentId, setAddEquipmentId] = useState('');
-  const [isTargeting, setIsTargeting] = useState(false); // Toggle between adding to current vs setting as target
+  const [isTargeting, setIsTargeting] = useState(false);
+  
+  // Selection state for grid
+  const [zone, setZone] = useState('');
+  const [cabinet, setCabinet] = useState('');
+  const [number, setNumber] = useState('');
 
   const { data: locations, isLoading } = useQuery({
     queryKey: ['locations'],
     queryFn: () => getLocations(),
   });
 
-  // ... (rest of the logic remains same)
-  // Fetch inventory for the selected location (currently here)
   const { data: inventory, isLoading: loadingInventory } = useQuery({
     queryKey: ['equipment', 'location', inventoryLocation?.uuid],
     queryFn: () => getEquipmentList(1, '', '', '', inventoryLocation?.uuid),
     enabled: !!inventoryLocation,
   });
 
-  // Fetch equipment that HAS this location as target
   const { data: targetedEquipment, isLoading: loadingTargeted } = useQuery({
     queryKey: ['equipment', 'target_location', inventoryLocation?.uuid],
     queryFn: async () => {
@@ -70,19 +75,30 @@ export const LocationManagement = () => {
   });
 
   const addToInventoryMutation = useMutation({
-    mutationFn: ({ uuid, location, isTarget }: { uuid: string; location: string; isTarget: boolean }) => {
+    mutationFn: ({ uuid, location, isTarget, grid }: { uuid: string; location: string; isTarget: boolean; grid: any }) => {
         const payload: any = isTarget ? { 
             target_location: location,
+            target_zone: grid.zone,
+            target_cabinet: grid.cabinet,
+            target_number: grid.number,
             status: 'TO_BE_MOVED' 
         } : { 
             location: location,
-            target_location: null // Clear target if arrived
+            zone: grid.zone,
+            cabinet: grid.cabinet,
+            number: grid.number,
+            target_location: null,
+            target_zone: '',
+            target_cabinet: '',
+            target_number: '',
+            status: 'AVAILABLE'
         };
         return updateEquipment(uuid, payload);
     },
     onSuccess: () => {
       alert('操作成功');
       setAddEquipmentId('');
+      setZone(''); setCabinet(''); setNumber('');
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
     },
     onError: (err: any) => {
@@ -121,7 +137,12 @@ export const LocationManagement = () => {
       const match = addEquipmentId.match(uuidPattern);
       const uuid = match ? match[0] : addEquipmentId;
 
-      addToInventoryMutation.mutate({ uuid, location: inventoryLocation.uuid, isTarget: isTargeting });
+      addToInventoryMutation.mutate({ 
+          uuid, 
+          location: inventoryLocation.uuid, 
+          isTarget: isTargeting,
+          grid: { zone, cabinet, number }
+      });
   };
 
   if (isLoading) return <div className="p-4">Loading locations...</div>;
@@ -305,24 +326,50 @@ export const LocationManagement = () => {
                                 </button>
                             </div>
                         </div>
-                        <div className="flex gap-2">
-                            <div className="relative flex-1">
+                        <div className="flex flex-col gap-3">
+                            <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                                 <input 
                                     type="text" 
-                                    placeholder={isTargeting ? "指定設備的目的地為此..." : "掃描設備 QR Code 以立即入庫..."}
-                                    className="w-full pl-9 pr-4 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder={isTargeting ? "輸入/掃描設備 UUID 以設為目標..." : "掃描設備 QR Code 以立即入庫..."}
+                                    className="w-full pl-9 pr-4 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                     value={addEquipmentId}
                                     onChange={e => setAddEquipmentId(e.target.value)}
                                 />
                             </div>
-                            <button 
-                                type="submit"
-                                disabled={addToInventoryMutation.isPending}
-                                className={`px-4 py-2 rounded-lg text-white flex items-center gap-2 transition-colors ${isTargeting ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-                            >
-                                <Plus className="h-4 w-4" /> {isTargeting ? '指定' : '入庫'}
-                            </button>
+                            
+                            <div className="flex gap-2">
+                                <div className="grid grid-cols-3 gap-2 flex-1">
+                                    <select 
+                                        className="border border-blue-200 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={zone} onChange={e => setZone(e.target.value)}
+                                    >
+                                        <option value="">區</option>
+                                        {LOCATION_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
+                                    </select>
+                                    <select 
+                                        className="border border-blue-200 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={cabinet} onChange={e => setCabinet(e.target.value)}
+                                    >
+                                        <option value="">櫃</option>
+                                        {LOCATION_CABINETS.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                    <select 
+                                        className="border border-blue-200 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={number} onChange={e => setNumber(e.target.value)}
+                                    >
+                                        <option value="">號</option>
+                                        {LOCATION_NUMBERS.map(n => <option key={n} value={n}>{n}</option>)}
+                                    </select>
+                                </div>
+                                <button 
+                                    type="submit"
+                                    disabled={addToInventoryMutation.isPending}
+                                    className={`px-4 py-1.5 rounded-lg text-white text-sm font-bold flex items-center gap-2 transition-colors whitespace-nowrap ${isTargeting ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                >
+                                    <Plus className="h-4 w-4" /> {isTargeting ? '指定' : '入庫'}
+                                </button>
+                            </div>
                         </div>
                     </form>
 
@@ -338,7 +385,7 @@ export const LocationManagement = () => {
                             ) : inventory?.results && inventory.results.length > 0 ? (
                                 <div className="space-y-2">
                                     {inventory.results.map((item: Equipment) => (
-                                        <div key={item.uuid} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition-colors text-sm">
+                                        <div key={item.uuid} className="p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition-colors text-sm">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center shrink-0">
                                                     {item.image ? (
@@ -347,9 +394,13 @@ export const LocationManagement = () => {
                                                         <Box className="w-4 h-4 text-gray-400" />
                                                     )}
                                                 </div>
-                                                <div>
-                                                    <div className="font-medium text-gray-900 leading-tight">{item.name}</div>
-                                                    <div className="text-[10px] text-gray-500">{item.status}</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium text-gray-900 leading-tight truncate">{item.name}</div>
+                                                    <div className="flex gap-1 mt-1">
+                                                        {item.zone && <span className="text-[9px] bg-gray-100 px-1 rounded">{item.zone}</span>}
+                                                        {item.cabinet && <span className="text-[9px] bg-gray-100 px-1 rounded">{item.cabinet}</span>}
+                                                        {item.number && <span className="text-[9px] bg-gray-100 px-1 rounded">{item.number}</span>}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -373,14 +424,21 @@ export const LocationManagement = () => {
                             ) : targetedEquipment?.results && targetedEquipment.results.length > 0 ? (
                                 <div className="space-y-2">
                                     {targetedEquipment.results.map((item: Equipment) => (
-                                        <div key={item.uuid} className="flex items-center justify-between p-3 bg-orange-50 border border-orange-100 rounded-lg text-sm">
+                                        <div key={item.uuid} className="p-3 bg-orange-50 border border-orange-100 rounded-lg text-sm">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 bg-white rounded flex items-center justify-center shrink-0">
                                                     <Box className="w-4 h-4 text-orange-400" />
                                                 </div>
-                                                <div>
-                                                    <div className="font-medium text-gray-900 leading-tight">{item.name}</div>
-                                                    <div className="text-[10px] text-orange-600 font-medium">目前在: {item.location_details?.full_path || '未指定'}</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium text-gray-900 leading-tight truncate">{item.name}</div>
+                                                    <div className="text-[9px] text-orange-600 font-medium truncate mt-1">
+                                                        目前在: {item.location_details?.full_path || '未指定'}
+                                                    </div>
+                                                    <div className="flex gap-1 mt-1">
+                                                        {item.target_zone && <span className="text-[9px] bg-white border border-orange-200 text-orange-600 px-1 rounded font-bold">預計:{item.target_zone}</span>}
+                                                        {item.target_cabinet && <span className="text-[9px] bg-white border border-orange-200 text-orange-600 px-1 rounded font-bold">{item.target_cabinet}</span>}
+                                                        {item.target_number && <span className="text-[9px] bg-white border border-orange-200 text-orange-600 px-1 rounded font-bold">{item.target_number}</span>}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -426,6 +484,21 @@ export const LocationManagement = () => {
                   value={editingLocation.description}
                   onChange={(e) => setEditingLocation({ ...editingLocation, description: e.target.value })}
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">父級位置 (選填)</label>
+                <select
+                    className="mt-1 block w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={editingLocation.parent || ''}
+                    onChange={(e) => setEditingLocation({ ...editingLocation, parent: e.target.value })}
+                >
+                    <option value="">無 (設為頂層位置)</option>
+                    {locations?.filter(loc => loc.uuid !== editingLocation.uuid).map((loc) => (
+                    <option key={loc.uuid} value={loc.uuid}>
+                        {loc.full_path}
+                    </option>
+                    ))}
+                </select>
               </div>
               <div className="flex justify-end gap-3 mt-6">
                 <button

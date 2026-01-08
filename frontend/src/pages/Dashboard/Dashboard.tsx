@@ -1,24 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getEquipmentList } from '../../api/equipment';
+import { getCategories } from '../../api/categories';
 import { useAuthStore } from '../../store/useAuthStore';
 import { LogOut, Search, QrCode, ScanLine, Users, Shield, Box, ChevronLeft, ChevronRight, Filter, Warehouse } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-
-const CATEGORIES = [
-  { value: '', label: '所有類別' },
-  { value: 'LAPTOP', label: 'Laptop' },
-  { value: 'MONITOR', label: 'Monitor' },
-  { value: 'PERIPHERALS', label: 'Peripherals' },
-  { value: 'AUDIO_VIDEO', label: 'Audio/Video' },
-  { value: 'FURNITURE', label: 'Furniture' },
-  { value: 'DEV_BOARD', label: 'Development Board' },
-  { value: 'TABLET', label: 'Tablet' },
-  { value: 'PHONE', label: 'Phone' },
-  { value: 'NETWORK', label: 'Network Equipment' },
-  { value: 'TOOLS', label: 'Tools' },
-  { value: 'OTHER', label: 'Other' },
-];
 
 const STATUSES = [
   { value: '', label: '所有狀態' },
@@ -43,6 +29,11 @@ export const Dashboard = () => {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['equipment', page, search, category, status],
     queryFn: () => getEquipmentList(page, search, category, status),
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories,
   });
 
   const statusMap: Record<string, string> = {
@@ -128,7 +119,8 @@ export const Dashboard = () => {
                         onChange={(e) => { setCategory(e.target.value); setPage(1); }}
                         className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded-lg leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                     >
-                        {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                        <option value="">所有類別</option>
+                        {categories?.results?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                         <Filter className="h-3 w-3" />
@@ -174,15 +166,15 @@ export const Dashboard = () => {
                       <div className="font-medium text-gray-900">{item.name}</div>
                       <div className="text-sm text-gray-500 truncate max-w-xs">{item.description}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            {CATEGORIES.find(c => c.value === item.category)?.label || item.category || 'Other'}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-800">
+                            {item.category_details?.name || '未分類'}
                         </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                         ${item.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' : 
-                          item.status === 'BORROWED' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+                          item.status === 'BORROWED' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
                         {statusMap[item.status] || item.status}
                       </span>
                     </td>
@@ -238,7 +230,7 @@ export const Dashboard = () => {
                                 
                                 {/* Simple Page Indicator */}
                                 <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                                    頁次 {page} / {Math.ceil(data.count / 10)}
+                                    頁次 {page} / {Math.ceil(data.count / 10) || 1}
                                 </span>
 
                                 <button

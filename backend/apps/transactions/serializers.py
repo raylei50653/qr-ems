@@ -2,11 +2,13 @@ from rest_framework import serializers
 from .models import Transaction
 from apps.users.serializers import UserSerializer
 from apps.equipment.serializers import EquipmentSerializer
+from apps.locations.serializers import LocationSerializer
 
 class TransactionSerializer(serializers.ModelSerializer):
     user_detail = UserSerializer(source='user', read_only=True)
     equipment_detail = EquipmentSerializer(source='equipment', read_only=True)
     admin_verifier_detail = UserSerializer(source='admin_verifier', read_only=True)
+    location_details = LocationSerializer(source='location', read_only=True)
     image = serializers.SerializerMethodField()
 
     class Meta:
@@ -14,6 +16,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'action', 'status', 'due_date', 'reason', 'image',
             'equipment', 'user', 'admin_verifier',
+            'location', 'location_details', 'zone', 'cabinet', 'number',
             'user_detail', 'equipment_detail', 'admin_verifier_detail',
             'created_at', 'updated_at'
         ]

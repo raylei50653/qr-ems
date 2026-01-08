@@ -2,24 +2,10 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentList, updateEquipment, createEquipment } from '../../api/equipment';
 import { getLocations } from '../../api/locations';
-import type { Equipment } from '../../types';
-import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter, Camera, MapPin } from 'lucide-react';
+import { getCategories } from '../../api/categories';
+import type { Equipment, Category } from '../../types';
+import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter, Camera, MapPin, Trash2, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-const CATEGORIES = [
-  { value: '', label: '所有類別' },
-  { value: 'LAPTOP', label: 'Laptop' },
-  { value: 'MONITOR', label: 'Monitor' },
-  { value: 'PERIPHERALS', label: 'Peripherals' },
-  { value: 'AUDIO_VIDEO', label: 'Audio/Video' },
-  { value: 'FURNITURE', label: 'Furniture' },
-  { value: 'DEV_BOARD', label: 'Development Board' },
-  { value: 'TABLET', label: 'Tablet' },
-  { value: 'PHONE', label: 'Phone' },
-  { value: 'NETWORK', label: 'Network Equipment' },
-  { value: 'TOOLS', label: 'Tools' },
-  { value: 'OTHER', label: 'Other' },
-];
 
 const STATUSES = [
   { value: '', label: '所有狀態' },
@@ -31,20 +17,6 @@ const STATUSES = [
   { value: 'IN_TRANSIT', label: '移動中' },
   { value: 'LOST', label: '遺失' },
   { value: 'DISPOSED', label: '已報廢' },
-];
-
-const EDIT_CATEGORIES = [
-  { value: 'LAPTOP', label: 'Laptop' },
-  { value: 'MONITOR', label: 'Monitor' },
-  { value: 'PERIPHERALS', label: 'Peripherals' },
-  { value: 'AUDIO_VIDEO', label: 'Audio/Video' },
-  { value: 'FURNITURE', label: 'Furniture' },
-  { value: 'DEV_BOARD', label: 'Development Board' },
-  { value: 'TABLET', label: 'Tablet' },
-  { value: 'PHONE', label: 'Phone' },
-  { value: 'NETWORK', label: 'Network Equipment' },
-  { value: 'TOOLS', label: 'Tools' },
-  { value: 'OTHER', label: 'Other' },
 ];
 
 const EDIT_STATUSES = [
@@ -67,7 +39,7 @@ export const EquipmentManagement = () => {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState(''); // Selected category ID
   const [status, setStatus] = useState('');
   
   // Modal State
@@ -78,6 +50,11 @@ export const EquipmentManagement = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['equipment', page, search, category, status],
     queryFn: () => getEquipmentList(page, search, category, status),
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories,
   });
 
   const { data: locations } = useQuery({
@@ -115,17 +92,24 @@ export const EquipmentManagement = () => {
     setIsModalOpen(true);
   };
 
+  const handleDelete = (item: Equipment) => {
+    navigate(`/admin/equipment/delete/${item.uuid}`);
+  };
+
   const handleCreate = () => {
     setEditingItem({ 
         name: '', 
         description: '', 
-        category: 'OTHER', 
+        category: undefined, 
         status: 'AVAILABLE',
         location: '',
         target_location: '',
         zone: '',
         cabinet: '',
-        number: ''
+        number: '',
+        target_zone: '',
+        target_cabinet: '',
+        target_number: ''
     });
     setSelectedFile(null);
     setIsModalOpen(true);
@@ -138,13 +122,23 @@ export const EquipmentManagement = () => {
     const formData = new FormData();
     formData.append('name', editingItem.name || '');
     formData.append('description', editingItem.description || '');
-    formData.append('category', editingItem.category || 'OTHER');
-    formData.append('status', editingItem.status || 'AVAILABLE');
+    
+    if (editingItem.category) formData.append('category', editingItem.category.toString());
+    
+    const hasTarget = !!(editingItem.target_zone || editingItem.target_cabinet || editingItem.target_number);
+    const finalStatus = hasTarget ? 'TO_BE_MOVED' : (editingItem.status || 'AVAILABLE');
+    formData.append('status', finalStatus);
+
     formData.append('location', editingItem.location || '');
-    formData.append('target_location', editingItem.target_location || '');
+    const targetLoc = hasTarget ? (editingItem.location || '') : '';
+    formData.append('target_location', targetLoc);
+    
     formData.append('zone', editingItem.zone || '');
     formData.append('cabinet', editingItem.cabinet || '');
     formData.append('number', editingItem.number || '');
+    formData.append('target_zone', editingItem.target_zone || '');
+    formData.append('target_cabinet', editingItem.target_cabinet || '');
+    formData.append('target_number', editingItem.target_number || '');
 
     if (selectedFile) {
         formData.append('image', selectedFile);
@@ -169,89 +163,74 @@ export const EquipmentManagement = () => {
                 設備管理
             </h1>
         </div>
-        <button 
-            onClick={handleCreate}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
-        >
-            <Plus className="h-5 w-5" /> 新增設備
-        </button>
+        <div className="flex gap-2 text-sm">
+            <button onClick={() => navigate('/admin/categories')} className="bg-indigo-50 text-indigo-600 border border-indigo-100 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-100 transition-colors font-bold shadow-sm">
+                <Tag className="h-5 w-5" /> 類別管理
+            </button>
+            <button onClick={() => navigate('/admin/equipment/removal')} className="bg-red-50 text-red-600 border border-red-100 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-100 transition-colors shadow-sm">
+                <Trash2 className="h-5 w-5" /> 移除設備
+            </button>
+            <button onClick={handleCreate} className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors shadow-sm">
+                <Plus className="h-5 w-5" /> 新增設備
+            </button>
+        </div>
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Search and Filter */}
         <div className="mb-6 flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                type="text"
-                placeholder="搜尋設備名稱或描述..."
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
+                <input type="text" placeholder="搜尋設備..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm" />
             </div>
-            
             <div className="flex gap-2">
-                <div className="relative">
                     <select
                         value={category}
                         onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-                        className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded-lg leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded-lg leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
                     >
-                        {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                        <option value="">所有類別</option>
+                        {categories?.results?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                        <Filter className="h-3 w-3" />
-                    </div>
-                </div>
-
-                <div className="relative">
-                    <select
-                        value={status}
-                        onChange={(e) => { setStatus(e.target.value); setPage(1); }}
-                        className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded-lg leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    >
-                        {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                        <Filter className="h-3 w-3" />
-                    </div>
-                </div>
+                <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="bg-white border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm">
+                    {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
             </div>
         </div>
 
         {isLoading ? (
-          <div className="text-center py-10 text-gray-500">載入中...</div>
+          <div className="text-center py-10 text-gray-500 italic">載入中...</div>
         ) : (
-          <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="bg-white shadow rounded-xl overflow-hidden border border-gray-100">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名稱 / 描述</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">類別</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">狀態</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">名稱 / 描述</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">類別</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">狀態</th>
+                  <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-widest">操作</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {data?.results.map((item) => (
-                  <tr key={item.uuid} className="hover:bg-gray-50">
+                  <tr key={item.uuid} className="hover:bg-gray-50 transition-colors text-sm">
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                      <div className="font-bold text-gray-900">{item.name}</div>
                       <div className="text-xs text-gray-500 truncate max-w-xs">{item.description}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {CATEGORIES.find(c => c.value === item.category)?.label || item.category}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${item.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' : 
-                          item.status === 'BORROWED' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {STATUSES.find(s => s.value === item.status)?.label || item.status}
+                      <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold">
+                        {item.category_details?.name || '未分類'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 flex items-center justify-end gap-1 ml-auto">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-bold rounded-full 
+                        ${item.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' : 
+                          item.status === 'BORROWED' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {statusMap[item.status] || item.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right font-medium">
+                      <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 transition-colors flex items-center gap-1 justify-end ml-auto">
                         <Edit className="h-4 w-4" /> 編輯
                       </button>
                     </td>
@@ -259,207 +238,110 @@ export const EquipmentManagement = () => {
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {data && (
+                <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                    <div className="flex-1 flex justify-between sm:hidden">
+                        <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={!data.previous} className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:bg-gray-100">上一頁</button>
+                        <button onClick={() => setPage(p => p + 1)} disabled={!data.next} className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:bg-gray-100">下一頁</button>
+                    </div>
+                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <p className="text-xs font-bold text-gray-500">顯示第 <span className="text-gray-800">{((page - 1) * 10) + 1}</span> 到 <span className="text-gray-800">{Math.min(page * 10, data.count)}</span> 筆，共 <span className="text-gray-800">{data.count}</span> 筆</p>
+                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={!data.previous} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:bg-gray-100">
+                                <ChevronLeft className="h-5 w-5" />
+                            </button>
+                            <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-xs font-bold text-gray-700">頁次 {page} / {Math.ceil(data.count / 10) || 1}</span>
+                            <button onClick={() => setPage(p => p + 1)} disabled={!data.next} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:bg-gray-100">
+                                <ChevronRight className="h-5 w-5" />
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+            )}
           </div>
         )}
       </main>
 
       {/* Edit Modal */}
       {isModalOpen && editingItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
-                    <h3 className="text-lg font-bold text-gray-800">
-                        {editingItem.uuid ? '編輯設備' : '新增設備'}
-                    </h3>
-                    <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                        <X className="h-6 w-6" />
-                    </button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
+                    <h3 className="text-xl font-black text-gray-800">{editingItem.uuid ? '編輯設備' : '新增設備'}</h3>
+                    <button onClick={() => setIsModalOpen(false)} className="bg-gray-100 p-2 rounded-full text-gray-400 hover:text-gray-600 transition-colors"><X className="h-5 w-5" /></button>
                 </div>
-                
                 <form onSubmit={handleSave} className="flex flex-col overflow-hidden flex-1">
-                    <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                    <div className="p-6 space-y-6 overflow-y-auto flex-1">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">設備名稱</label>
-                            <input 
-                                type="text" 
-                                required
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                                value={editingItem.name || ''}
-                                onChange={e => setEditingItem({...editingItem, name: e.target.value})}
-                            />
+                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1">設備名稱</label>
+                            <input type="text" required className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 font-bold focus:border-primary outline-none transition-colors" value={editingItem.name || ''} onChange={e => setEditingItem({...editingItem, name: e.target.value})} />
                         </div>
-
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
-                            <textarea 
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                                rows={3}
-                                value={editingItem.description || ''}
-                                onChange={e => setEditingItem({...editingItem, description: e.target.value})}
-                            />
+                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1">描述</label>
+                            <textarea className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 font-bold focus:border-primary outline-none transition-colors" rows={3} value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
                         </div>
-
+                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3 shadow-inner">
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">目前存放位置</h4>
+                            <div className="grid grid-cols-3 gap-3">
+                                {[['區', editingItem.zone, 'zone'], ['櫃', editingItem.cabinet, 'cabinet'], ['號', editingItem.number, 'number']].map(([label, val, field]) => (
+                                    <div key={field as string}>
+                                        <label className="block text-[10px] font-bold text-gray-400 mb-1">{label as string}</label>
+                                        <select className="w-full border-2 border-white rounded-xl px-2 py-2 text-sm font-bold shadow-sm focus:border-primary outline-none" value={(val as string) || ''} onChange={e => setEditingItem({...editingItem, [field as string]: e.target.value})}>
+                                            <option value="">選擇</option>
+                                            {(field === 'zone' ? LOCATION_ZONES : field === 'cabinet' ? LOCATION_CABINETS : LOCATION_NUMBERS).map(o => <option key={o} value={o}>{o}</option>)}
+                                        </select>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 space-y-3 shadow-inner">
+                            <h4 className="text-xs font-black text-orange-400 uppercase tracking-widest">目標目的地</h4>
+                            <div className="grid grid-cols-3 gap-3">
+                                {[['目標區', editingItem.target_zone, 'target_zone'], ['目標櫃', editingItem.target_cabinet, 'target_cabinet'], ['目標號', editingItem.target_number, 'target_number']].map(([label, val, field]) => (
+                                    <div key={field as string}>
+                                        <label className="block text-[10px] font-bold text-orange-300 mb-1">{label as string}</label>
+                                        <select className="w-full border-2 border-white rounded-xl px-2 py-2 text-sm font-bold shadow-sm focus:border-orange-400 outline-none" value={(val as string) || ''} onChange={e => setEditingItem({...editingItem, [field as string]: e.target.value})}>
+                                            <option value="">選擇</option>
+                                            {(field === 'target_zone' ? LOCATION_ZONES : field === 'target_cabinet' ? LOCATION_CABINETS : LOCATION_NUMBERS).map(o => <option key={o} value={o}>{o}</option>)}
+                                        </select>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">儲存位置 (Warehouse Location)</label>
-                            <div className="relative">
-                                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-                                <select 
-                                    className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={editingItem.location || ''}
-                                    onChange={e => setEditingItem({...editingItem, location: e.target.value})}
-                                >
-                                    <option value="">選擇儲存位置</option>
-                                    {locations?.map(loc => (
-                                        <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>
-                                    ))}
-                                </select>
-                            </div>
+                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">設備圖片</label>
+                            <label className="cursor-pointer flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-200 rounded-3xl hover:border-primary hover:bg-primary/5 transition-all relative overflow-hidden bg-gray-50/50 group">
+                                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => e.target.files?.[0] && setSelectedFile(e.target.files[0])} />
+                                {selectedFile ? <img src={URL.createObjectURL(selectedFile)} alt="Preview" className="h-full object-contain" /> : editingItem.image ? (
+                                    <div className="relative h-full w-full flex items-center justify-center group">
+                                        <img src={editingItem.image} alt="Current" className="h-full object-contain opacity-50 group-hover:opacity-30 transition-opacity" />
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600"><Camera className="h-8 w-8 mb-2" /><span className="text-xs font-bold">點擊更換照片</span></div>
+                                    </div>
+                                ) : <div className="flex flex-col items-center text-gray-400 group-hover:scale-110 transition-transform"><Camera className="h-8 w-8 mb-2" /><span className="text-xs font-bold">拍攝或上傳照片</span></div>}
+                            </label>
                         </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-orange-700 mb-1">目標目的地 (Target Location)</label>
-                            <div className="relative">
-                                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400 h-4 w-4" />
-                                <select 
-                                    className="w-full border border-orange-200 bg-orange-50/30 rounded-lg pl-10 pr-3 py-2 focus:ring-2 focus:ring-orange-500 outline-none"
-                                    value={editingItem.target_location || ''}
-                                    onChange={e => setEditingItem({...editingItem, target_location: e.target.value})}
-                                >
-                                    <option value="">(未指定目標)</option>
-                                    {locations?.map(loc => (
-                                        <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">區 (Zone)</label>
-                                <select 
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={editingItem.zone || ''}
-                                    onChange={e => setEditingItem({...editingItem, zone: e.target.value})}
-                                >
-                                    <option value="">選擇區</option>
-                                    {LOCATION_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">櫃 (Cabinet)</label>
-                                <select 
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={editingItem.cabinet || ''}
-                                    onChange={e => setEditingItem({...editingItem, cabinet: e.target.value})}
-                                >
-                                    <option value="">選擇櫃</option>
-                                    {LOCATION_CABINETS.map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">號 (Number)</label>
-                                <select 
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={editingItem.number || ''}
-                                    onChange={e => setEditingItem({...editingItem, number: e.target.value})}
-                                >
-                                    <option value="">選擇號</option>
-                                    {LOCATION_NUMBERS.map(n => <option key={n} value={n}>{n}</option>)}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">設備圖片</label>
-                            <div className="mt-1 flex items-center gap-4">
-                                <label className="cursor-pointer flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors bg-gray-50">
-                                    <input 
-                                        type="file" 
-                                        accept="image/*"
-                                        capture="environment"
-                                        className="hidden"
-                                        onChange={e => {
-                                            if (e.target.files && e.target.files[0]) {
-                                                setSelectedFile(e.target.files[0]);
-                                            }
-                                        }}
-                                    />
-                                    {selectedFile ? (
-                                        <img src={URL.createObjectURL(selectedFile)} alt="Preview" className="h-full object-contain" />
-                                    ) : editingItem.image ? (
-                                        <div className="relative h-full w-full flex items-center justify-center group">
-                                             <img src={editingItem.image} alt="Current" className="h-full object-contain opacity-50 group-hover:opacity-30 transition-opacity" />
-                                             <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
-                                                <Camera className="h-8 w-8 mb-2" />
-                                                <span className="text-sm font-medium">點擊更換照片</span>
-                                             </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col items-center text-gray-500">
-                                            <Camera className="h-8 w-8 mb-2" />
-                                            <span className="text-sm">點擊拍攝或上傳照片</span>
-                                        </div>
-                                    )}
-                                </label>
-                                {(selectedFile || editingItem.image) && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSelectedFile(null);
-                                        }}
-                                        className="text-sm text-red-500 hover:text-red-700 whitespace-nowrap self-start mt-2"
-                                        hidden={!selectedFile} 
-                                    >
-                                        重置選擇
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">類別</label>
-                                <select 
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={editingItem.category || 'OTHER'}
-                                    onChange={e => setEditingItem({...editingItem, category: e.target.value})}
-                                >
-                                    {EDIT_CATEGORIES.map(c => (
-                                        <option key={c.value} value={c.value}>{c.label}</option>
-                                    ))}
+                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1">類別</label>
+                                <select className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 font-bold focus:border-primary outline-none transition-colors bg-white" value={editingItem.category || ''} onChange={e => setEditingItem({...editingItem, category: Number(e.target.value)})}>
+                                    <option value="">請選擇類別</option>
+                                    {categories?.results?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
                             </div>
-
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">狀態</label>
-                                <select 
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={editingItem.status || 'AVAILABLE'}
-                                    onChange={e => setEditingItem({...editingItem, status: e.target.value as any})}
-                                >
-                                    {EDIT_STATUSES.map(s => (
-                                        <option key={s.value} value={s.value}>{s.label}</option>
-                                    ))}
+                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1">狀態</label>
+                                <select className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 font-bold focus:border-primary outline-none transition-colors bg-white" value={editingItem.status || 'AVAILABLE'} onChange={e => setEditingItem({...editingItem, status: e.target.value as any})}>
+                                    {EDIT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                                 </select>
                             </div>
                         </div>
                     </div>
-
                     <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 shrink-0">
-                        <button 
-                            type="button"
-                            onClick={() => setIsModalOpen(false)}
-                            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                        >
-                            取消
-                        </button>
-                        <button 
-                            type="submit"
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                            disabled={updateMutation.isPending || createMutation.isPending}
-                        >
-                            <Save className="h-4 w-4" />
-                            {updateMutation.isPending || createMutation.isPending ? '儲存中...' : '儲存'}
+                        <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 border-2 border-gray-200 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition-all">取消</button>
+                        <button type="submit" className="px-8 py-2 bg-primary text-white rounded-xl font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all" disabled={updateMutation.isPending || createMutation.isPending}>
+                            <Save className="h-4 w-4 mr-2 inline" />{updateMutation.isPending || createMutation.isPending ? '儲存中...' : '儲存'}
                         </button>
                     </div>
                 </form>
@@ -468,4 +350,15 @@ export const EquipmentManagement = () => {
       )}
     </div>
   );
+};
+
+const statusMap: Record<string, string> = {
+    AVAILABLE: '可借用',
+    BORROWED: '已借出',
+    PENDING_RETURN: '待歸還',
+    MAINTENANCE: '維護中',
+    TO_BE_MOVED: '需移動',
+    IN_TRANSIT: '移動中',
+    LOST: '遺失',
+    DISPOSED: '已報廢',
 };

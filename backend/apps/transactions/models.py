@@ -8,6 +8,8 @@ class Transaction(models.Model):
         RETURN = 'RETURN', _('Return')
         MAINTENANCE_IN = 'MAINTENANCE_IN', _('Maintenance In')
         MAINTENANCE_OUT = 'MAINTENANCE_OUT', _('Maintenance Out')
+        MOVE_START = 'MOVE_START', _('Move Start')
+        MOVE_CONFIRM = 'MOVE_CONFIRM', _('Move Confirm')
 
     class Status(models.TextChoices):
         COMPLETED = 'COMPLETED', _('Completed')
@@ -54,6 +56,18 @@ class Transaction(models.Model):
         blank=True,
         verbose_name=_('Reason')
     )
+    # Recorded location info at time of transaction
+    location = models.ForeignKey(
+        'locations.Location',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_('Location')
+    )
+    zone = models.CharField(max_length=50, blank=True, verbose_name="區")
+    cabinet = models.CharField(max_length=50, blank=True, verbose_name="櫃")
+    number = models.CharField(max_length=50, blank=True, verbose_name="號")
+    
     image = models.ImageField(
         upload_to='transaction_images/',
         blank=True,

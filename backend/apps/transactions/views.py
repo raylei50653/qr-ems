@@ -42,7 +42,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 if equipment.status != Equipment.Status.AVAILABLE:
                     raise ValidationError("Equipment is not available")
 
-                # Create Transaction
+                # Create Transaction with location snapshot
                 txn = Transaction.objects.create(
                     equipment=equipment,
                     user=request.user,
@@ -50,7 +50,11 @@ class TransactionViewSet(viewsets.ModelViewSet):
                     status=Transaction.Status.COMPLETED,
                     due_date=due_date,
                     reason=reason,
-                    image=image
+                    image=image,
+                    location=equipment.location,
+                    zone=equipment.zone,
+                    cabinet=equipment.cabinet,
+                    number=equipment.number
                 )
 
                 # Update Equipment
@@ -85,12 +89,16 @@ class TransactionViewSet(viewsets.ModelViewSet):
                     raise ValidationError("You can only return equipment that you have personally borrowed.")
 
 
-                # Create Transaction (Return Request)
+                # Create Transaction (Return Request) with location snapshot
                 txn = Transaction.objects.create(
                     equipment=equipment,
-                    user=request.user, # The returner (should be the borrower)
+                    user=request.user, # The returner
                     action=Transaction.Action.RETURN,
                     status=Transaction.Status.PENDING_APPROVAL,
+                    location=equipment.location,
+                    zone=equipment.zone,
+                    cabinet=equipment.cabinet,
+                    number=equipment.number
                 )
 
                 # Update Equipment
@@ -107,6 +115,12 @@ class TransactionViewSet(viewsets.ModelViewSet):
         if not (request.user.role in [User.Role.MANAGER, User.Role.ADMIN] or request.user.is_staff):
              return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
+        # Optional: admin can specify a new return location
+        new_location_id = request.data.get('location')
+        new_zone = request.data.get('zone')
+        new_cabinet = request.data.get('cabinet')
+        new_number = request.data.get('number')
+
         with transaction.atomic():
             txn = Transaction.objects.select_for_update().get(pk=pk)
             equipment = Equipment.objects.select_for_update().get(uuid=txn.equipment.uuid)
@@ -116,6 +130,20 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
             txn.status = Transaction.Status.COMPLETED
             txn.admin_verifier = request.user
+            
+            # If admin provided new location during approval, update equipment
+            if new_location_id:
+                from apps.locations.models import Location
+                equipment.location = Location.objects.get(uuid=new_location_id)
+            if new_zone is not None: equipment.zone = new_zone
+            if new_cabinet is not None: equipment.cabinet = new_cabinet
+            if new_number is not None: equipment.number = new_number
+
+            # Update transaction snapshot to the FINAL location
+            txn.location = equipment.location
+            txn.zone = equipment.zone
+            txn.cabinet = equipment.cabinet
+            txn.number = equipment.number
             txn.save()
 
             equipment.status = Equipment.Status.AVAILABLE
