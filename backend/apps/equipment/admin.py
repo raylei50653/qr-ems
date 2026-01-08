@@ -7,8 +7,8 @@ class AttachmentInline(admin.TabularInline):
 
 @admin.register(Equipment)
 class EquipmentAdmin(admin.ModelAdmin):
-    list_display = ('name', 'uuid', 'status', 'created_at')
-    list_filter = ('status',)
+    list_display = ('name', 'category', 'status', 'location', 'created_at')
+    list_filter = ('category', 'status', 'location')
     search_fields = ('name', 'description')
     readonly_fields = ('uuid', 'created_at', 'updated_at')
     inlines = [AttachmentInline]

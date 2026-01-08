@@ -2,9 +2,9 @@ import client from './client';
 import type { Equipment, PaginatedResponse } from '../types';
 import type { Transaction } from './transactions';
 
-export const getEquipmentList = async (page = 1, search = '', category = '', status = '') => {
+export const getEquipmentList = async (page = 1, search = '', category = '', status = '', location = '') => {
   const { data } = await client.get<PaginatedResponse<Equipment>>('/equipment/', {
-    params: { page, search, category, status },
+    params: { page, search, category, status, location },
   });
   return data;
 };

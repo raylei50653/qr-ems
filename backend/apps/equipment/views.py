@@ -32,11 +32,17 @@ class EquipmentViewSet(viewsets.ModelViewSet):
         queryset = Equipment.objects.all()
         category = self.request.query_params.get('category')
         status = self.request.query_params.get('status')
+        location = self.request.query_params.get('location')
+        target_location = self.request.query_params.get('target_location')
         
         if category:
             queryset = queryset.filter(category=category)
         if status:
             queryset = queryset.filter(status=status)
+        if location:
+            queryset = queryset.filter(location__uuid=location)
+        if target_location:
+            queryset = queryset.filter(target_location__uuid=target_location)
             
         return queryset
 

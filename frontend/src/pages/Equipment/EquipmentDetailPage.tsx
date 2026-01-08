@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getEquipmentDetail, getEquipmentHistory } from '../../api/equipment';
+import { getEquipmentDetail, getEquipmentHistory, updateEquipment } from '../../api/equipment';
+import { getLocations } from '../../api/locations';
 import { transactionsApi } from '../../api/transactions';
-import { ArrowLeft, Box, Activity, User as UserIcon, History, Clock, MapPin } from 'lucide-react';
+import { ArrowLeft, Box, Activity, User as UserIcon, History, Clock, MapPin, Move, X, Save } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
 export const EquipmentDetailPage = () => {
@@ -11,12 +12,17 @@ export const EquipmentDetailPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user: loggedInUser } = useAuthStore(); // Get logged-in user info
+  
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState('');
 
   const statusMap: Record<string, string> = {
     AVAILABLE: '可借用',
     BORROWED: '已借出',
     PENDING_RETURN: '待歸還',
     MAINTENANCE: '維護中',
+    TO_BE_MOVED: '需移動',
+    IN_TRANSIT: '移動中',
     LOST: '遺失',
     DISPOSED: '已報廢',
   };
@@ -40,6 +46,12 @@ export const EquipmentDetailPage = () => {
     enabled: !!uuid,
   });
 
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: () => getLocations(),
+    enabled: isMoveModalOpen,
+  });
+
   const returnMutation = useMutation({
     mutationFn: transactionsApi.returnRequest,
     onSuccess: () => {
@@ -53,6 +65,18 @@ export const EquipmentDetailPage = () => {
     },
   });
 
+  const moveMutation = useMutation({
+    mutationFn: ({ uuid, data }: { uuid: string; data: Partial<any> }) => updateEquipment(uuid, data),
+    onSuccess: () => {
+      alert('設備移動成功！');
+      setIsMoveModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['equipment', uuid] });
+    },
+    onError: (err: any) => {
+      alert('移動失敗：' + (err.response?.data?.detail || err.message));
+    }
+  });
+
   const handleReturn = () => {
     if (window.confirm('確定要歸還此設備嗎？')) {
       if (uuid) {
@@ -61,12 +85,22 @@ export const EquipmentDetailPage = () => {
     }
   };
 
+  const handleMove = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uuid) return;
+    moveMutation.mutate({
+      uuid,
+      data: { location: selectedLocation || null }
+    });
+  };
+
   const handleBack = () => {
     navigate('/', { replace: true });
   };
 
   // Determine if the return button should be shown and enabled
   const showReturnButton = equipment?.status === 'BORROWED' && equipment?.current_possession?.id === loggedInUser?.id;
+  const canMove = equipment?.status === 'AVAILABLE' || (loggedInUser?.role === 'ADMIN' || loggedInUser?.role === 'MANAGER');
 
   if (isLoading) return <div className="p-8 text-center">載入設備詳情...</div>;
   if (isError || !equipment) return <div className="p-8 text-center text-red-500">找不到設備。</div>;
@@ -136,11 +170,20 @@ export const EquipmentDetailPage = () => {
                  <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-1">
                     <MapPin className="w-4 h-4" /> 存放位置
                  </h3>
-                 <div className="flex gap-4 text-gray-900 font-medium">
-                    {equipment.zone && <span className="bg-white px-2 py-1 rounded border border-gray-200">{equipment.zone}</span>}
-                    {equipment.cabinet && <span className="bg-white px-2 py-1 rounded border border-gray-200">{equipment.cabinet}</span>}
-                    {equipment.number && <span className="bg-white px-2 py-1 rounded border border-gray-200">{equipment.number}</span>}
-                    {!equipment.zone && !equipment.cabinet && !equipment.number && <span className="text-gray-400 font-normal italic">未指定位置</span>}
+                 <div className="space-y-2">
+                    {equipment.location_details && (
+                        <div className="text-blue-700 font-semibold bg-blue-50 px-3 py-2 rounded border border-blue-100 mb-2">
+                            倉庫位置: {equipment.location_details.full_path}
+                        </div>
+                    )}
+                    <div className="flex gap-4 text-gray-900 font-medium">
+                        {equipment.zone && <span className="bg-white px-2 py-1 rounded border border-gray-200">{equipment.zone}</span>}
+                        {equipment.cabinet && <span className="bg-white px-2 py-1 rounded border border-gray-200">{equipment.cabinet}</span>}
+                        {equipment.number && <span className="bg-white px-2 py-1 rounded border border-gray-200">{equipment.number}</span>}
+                        {!equipment.location_details && !equipment.zone && !equipment.cabinet && !equipment.number && (
+                            <span className="text-gray-400 font-normal italic">未指定位置</span>
+                        )}
+                    </div>
                  </div>
             </div>
 
@@ -160,7 +203,19 @@ export const EquipmentDetailPage = () => {
             </div>
 
             {/* Actions */}
-            <div className="border-t border-gray-100 pt-6 flex justify-end gap-3">
+            <div className="border-t border-gray-100 pt-6 flex justify-end gap-3 flex-wrap">
+                {canMove && (
+                    <button
+                        onClick={() => {
+                            setSelectedLocation(equipment.location || '');
+                            setIsMoveModalOpen(true);
+                        }}
+                        className="bg-gray-100 text-gray-700 px-6 py-2.5 rounded-lg font-medium hover:bg-gray-200 active:bg-gray-300 transition-colors shadow-sm flex items-center gap-2"
+                    >
+                        <Move className="w-4 h-4" /> 移動
+                    </button>
+                )}
+
                 {equipment.status === 'AVAILABLE' && (
                 <button
                     onClick={() => navigate(`/borrow/${equipment.uuid}`)}
@@ -244,6 +299,60 @@ export const EquipmentDetailPage = () => {
             </div>
         </div>
       </div>
+
+      {/* Move Modal */}
+      {isMoveModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 className="text-lg font-bold text-gray-800">移動設備</h3>
+                    <button onClick={() => setIsMoveModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                        <X className="h-6 w-6" />
+                    </button>
+                </div>
+                
+                <form onSubmit={handleMove}>
+                    <div className="p-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">選擇新位置</label>
+                        <div className="relative">
+                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                            <select 
+                                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                value={selectedLocation}
+                                onChange={e => setSelectedLocation(e.target.value)}
+                            >
+                                <option value="">(移除位置)</option>
+                                {locations?.map(loc => (
+                                    <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                            將設備移動到新的倉庫位置。
+                        </p>
+                    </div>
+
+                    <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+                        <button 
+                            type="button"
+                            onClick={() => setIsMoveModalOpen(false)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                        >
+                            取消
+                        </button>
+                        <button 
+                            type="submit"
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                            disabled={moveMutation.isPending}
+                        >
+                            <Save className="h-4 w-4" />
+                            {moveMutation.isPending ? '移動中...' : '確認移動'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

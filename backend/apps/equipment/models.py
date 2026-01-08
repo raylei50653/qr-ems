@@ -8,6 +8,8 @@ class Equipment(models.Model):
         BORROWED = 'BORROWED', 'Borrowed'
         PENDING_RETURN = 'PENDING_RETURN', 'Pending Return'
         MAINTENANCE = 'MAINTENANCE', 'Maintenance'
+        TO_BE_MOVED = 'TO_BE_MOVED', 'To Be Moved'
+        IN_TRANSIT = 'IN_TRANSIT', 'In Transit'
         LOST = 'LOST', 'Lost'
         DISPOSED = 'DISPOSED', 'Disposed'
 
@@ -42,6 +44,22 @@ class Equipment(models.Model):
     )
 
     # Location Information
+    location = models.ForeignKey(
+        'locations.Location',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='equipment',
+        verbose_name="存儲位置"
+    )
+    target_location = models.ForeignKey(
+        'locations.Location',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='targeted_equipment',
+        verbose_name="目標位置"
+    )
     zone = models.CharField(max_length=50, blank=True, verbose_name="區")
     cabinet = models.CharField(max_length=50, blank=True, verbose_name="櫃")
     number = models.CharField(max_length=50, blank=True, verbose_name="號")

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getEquipmentList } from '../../api/equipment';
 import { useAuthStore } from '../../store/useAuthStore';
-import { LogOut, Search, QrCode, ScanLine, Users, Shield, Box, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { LogOut, Search, QrCode, ScanLine, Users, Shield, Box, ChevronLeft, ChevronRight, Filter, Warehouse } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const CATEGORIES = [
@@ -26,6 +26,8 @@ const STATUSES = [
   { value: 'BORROWED', label: '已借出' },
   { value: 'PENDING_RETURN', label: '待歸還' },
   { value: 'MAINTENANCE', label: '維護中' },
+  { value: 'TO_BE_MOVED', label: '需移動' },
+  { value: 'IN_TRANSIT', label: '移動中' },
   { value: 'LOST', label: '遺失' },
   { value: 'DISPOSED', label: '已報廢' },
 ];
@@ -48,6 +50,8 @@ export const Dashboard = () => {
     BORROWED: '已借出',
     PENDING_RETURN: '待歸還',
     MAINTENANCE: '維護中',
+    TO_BE_MOVED: '需移動',
+    IN_TRANSIT: '移動中',
     LOST: '遺失',
     DISPOSED: '已報廢',
   };
@@ -70,6 +74,10 @@ export const Dashboard = () => {
                 <Link to="/admin/returns" className="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors" title="歸還審核">
                     <Shield className="h-5 w-5" />
                     <span className="hidden sm:inline">歸還審核</span>
+                </Link>
+                <Link to="/admin/locations" className="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors" title="位置管理">
+                    <Warehouse className="h-5 w-5" />
+                    <span className="hidden sm:inline">位置管理</span>
                 </Link>
             </>
           )}

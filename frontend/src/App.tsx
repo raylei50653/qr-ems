@@ -11,6 +11,8 @@ import { BorrowPage } from './pages/Borrow/BorrowPage';
 import { UserManagement } from './pages/Admin/UserManagement';
 import { ReturnRequests } from './pages/Admin/ReturnRequests';
 import { EquipmentManagement } from './pages/Admin/EquipmentManagement';
+import { LocationManagement } from './pages/Admin/Locations/LocationManagement';
+import { LocationConfirmPage } from './pages/Admin/Locations/LocationConfirmPage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
@@ -50,6 +52,8 @@ function App() {
               <Route path="/admin/users" element={<UserManagement />} />
               <Route path="/admin/returns" element={<ReturnRequests />} />
               <Route path="/admin/equipment" element={<EquipmentManagement />} />
+              <Route path="/admin/locations" element={<LocationManagement />} />
+              <Route path="/admin/locations/confirm" element={<LocationConfirmPage />} />
             </Route>
             
             <Route path="*" element={<Navigate to="/" replace />} />

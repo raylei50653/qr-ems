@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentList, updateEquipment, createEquipment } from '../../api/equipment';
+import { getLocations } from '../../api/locations';
 import type { Equipment } from '../../types';
-import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter, Camera } from 'lucide-react';
+import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter, Camera, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const CATEGORIES = [
@@ -26,6 +27,8 @@ const STATUSES = [
   { value: 'BORROWED', label: '已借出' },
   { value: 'PENDING_RETURN', label: '待歸還' },
   { value: 'MAINTENANCE', label: '維護中' },
+  { value: 'TO_BE_MOVED', label: '需移動' },
+  { value: 'IN_TRANSIT', label: '移動中' },
   { value: 'LOST', label: '遺失' },
   { value: 'DISPOSED', label: '已報廢' },
 ];
@@ -49,6 +52,8 @@ const EDIT_STATUSES = [
   { value: 'BORROWED', label: '已借出' },
   { value: 'PENDING_RETURN', label: '待歸還' },
   { value: 'MAINTENANCE', label: '維護中' },
+  { value: 'TO_BE_MOVED', label: '需移動' },
+  { value: 'IN_TRANSIT', label: '移動中' },
   { value: 'LOST', label: '遺失' },
   { value: 'DISPOSED', label: '已報廢' },
 ];
@@ -73,6 +78,11 @@ export const EquipmentManagement = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['equipment', page, search, category, status],
     queryFn: () => getEquipmentList(page, search, category, status),
+  });
+
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: () => getLocations(),
   });
 
   const updateMutation = useMutation({
@@ -111,6 +121,8 @@ export const EquipmentManagement = () => {
         description: '', 
         category: 'OTHER', 
         status: 'AVAILABLE',
+        location: '',
+        target_location: '',
         zone: '',
         cabinet: '',
         number: ''
@@ -128,6 +140,8 @@ export const EquipmentManagement = () => {
     formData.append('description', editingItem.description || '');
     formData.append('category', editingItem.category || 'OTHER');
     formData.append('status', editingItem.status || 'AVAILABLE');
+    formData.append('location', editingItem.location || '');
+    formData.append('target_location', editingItem.target_location || '');
     formData.append('zone', editingItem.zone || '');
     formData.append('cabinet', editingItem.cabinet || '');
     formData.append('number', editingItem.number || '');
@@ -285,6 +299,40 @@ export const EquipmentManagement = () => {
                             />
                         </div>
 
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">儲存位置 (Warehouse Location)</label>
+                            <div className="relative">
+                                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                                <select 
+                                    className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={editingItem.location || ''}
+                                    onChange={e => setEditingItem({...editingItem, location: e.target.value})}
+                                >
+                                    <option value="">選擇儲存位置</option>
+                                    {locations?.map(loc => (
+                                        <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-orange-700 mb-1">目標目的地 (Target Location)</label>
+                            <div className="relative">
+                                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400 h-4 w-4" />
+                                <select 
+                                    className="w-full border border-orange-200 bg-orange-50/30 rounded-lg pl-10 pr-3 py-2 focus:ring-2 focus:ring-orange-500 outline-none"
+                                    value={editingItem.target_location || ''}
+                                    onChange={e => setEditingItem({...editingItem, target_location: e.target.value})}
+                                >
+                                    <option value="">(未指定目標)</option>
+                                    {locations?.map(loc => (
+                                        <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">區 (Zone)</label>
@@ -387,7 +435,7 @@ export const EquipmentManagement = () => {
                                 <select 
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={editingItem.status || 'AVAILABLE'}
-                                    onChange={e => setEditingItem({...editingItem, status: e.target.value})}
+                                    onChange={e => setEditingItem({...editingItem, status: e.target.value as any})}
                                 >
                                     {EDIT_STATUSES.map(s => (
                                         <option key={s.value} value={s.value}>{s.label}</option>

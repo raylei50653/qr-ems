@@ -45,12 +45,20 @@ export const ScanPage = () => {
   };
 
   const handleScanSuccess = (decodedText: string) => {
+    if (decodedText.startsWith('location:')) {
+      const locationUuid = decodedText.split(':')[1];
+      stopScanning();
+      // Navigate to a new page that handles equipment placement at this location
+      navigate(`/admin/locations/confirm?location_uuid=${locationUuid}`);
+      return;
+    }
+
     const uuid = extractUuid(decodedText);
     if (uuid) {
       stopScanning();
       navigate(`/equipment/${uuid}`);
     } else {
-      console.warn("Scanned text does not contain a valid UUID:", decodedText);
+      console.warn("Scanned text does not contain a valid UUID or location tag:", decodedText);
     }
   };
 

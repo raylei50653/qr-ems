@@ -1,6 +1,6 @@
 // --- Enums ---
 export type UserRole = 'ADMIN' | 'MANAGER' | 'USER';
-export type EquipmentStatus = 'AVAILABLE' | 'BORROWED' | 'PENDING_RETURN' | 'MAINTENANCE' | 'LOST' | 'DISPOSED';
+export type EquipmentStatus = 'AVAILABLE' | 'BORROWED' | 'PENDING_RETURN' | 'MAINTENANCE' | 'TO_BE_MOVED' | 'IN_TRANSIT' | 'LOST' | 'DISPOSED';
 export type TransactionStatus = 'COMPLETED' | 'PENDING_APPROVAL' | 'REJECTED';
 
 // --- Models ---
@@ -13,12 +13,27 @@ export interface User {
   avatar_url?: string;
 }
 
+export interface Location {
+  uuid: string;
+  name: string;
+  description: string;
+  parent?: string;
+  full_path: string;
+  children?: Location[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Equipment {
   uuid: string;
   name: string;
   description: string;
   status: EquipmentStatus;
   category: string;
+  location?: string;
+  location_details?: Location;
+  target_location?: string;
+  target_location_details?: Location;
   zone?: string;
   cabinet?: string;
   number?: string;
