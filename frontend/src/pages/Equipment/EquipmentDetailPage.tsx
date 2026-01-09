@@ -4,8 +4,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentDetail, getEquipmentHistory, updateEquipment } from '../../api/equipment';
 import { getLocations } from '../../api/locations';
 import { transactionsApi } from '../../api/transactions';
-import { ArrowLeft, Box, Activity, User as UserIcon, History, Clock, MapPin, Move, X, Save, Camera } from 'lucide-react';
+import { ArrowLeft, Box, Activity, User as UserIcon, History, Clock, MapPin, Move, X, Save, Camera, QrCode } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { EquipmentStatusBadge } from '../../components/Equipment/EquipmentStatusBadge';
+import { LocationDisplay } from '../../components/Equipment/LocationDisplay';
+import { QRCodeSVG } from 'qrcode.react';
 
 const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
 const LOCATION_CABINETS = Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']);
@@ -19,6 +22,7 @@ export const EquipmentDetailPage = () => {
   
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [showQR, setShowQR] = useState(false);
   const [confirmType, setConfirmType] = useState<'START' | 'FINISH'>('START');
   
   const [targetZone, setTargetZone] = useState('');
@@ -26,16 +30,7 @@ export const EquipmentDetailPage = () => {
   const [targetNumber, setTargetNumber] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const statusMap: Record<string, string> = {
-    AVAILABLE: '可借用',
-    BORROWED: '已借出',
-    PENDING_RETURN: '待歸還',
-    MAINTENANCE: '維護中',
-    TO_BE_MOVED: '需移動',
-    IN_TRANSIT: '移動中',
-    LOST: '遺失',
-    DISPOSED: '已報廢',
-  };
+
 
   const actionMap: Record<string, string> = {
     BORROW: '借用',
@@ -149,12 +144,21 @@ export const EquipmentDetailPage = () => {
     <div className="min-h-screen bg-gray-50 p-4 text-gray-900">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-            {/* Header */}
-            <div className="bg-primary px-6 py-4 flex items-center text-white">
-                <button onClick={handleBack} className="mr-4 hover:bg-white/10 p-1 rounded transition-colors">
-                    <ArrowLeft className="h-6 w-6" />
+            <div className="bg-primary px-6 py-4 flex items-center justify-between text-white">
+                <div className="flex items-center">
+                    <button onClick={handleBack} className="mr-4 hover:bg-white/10 p-1 rounded transition-colors">
+                        <ArrowLeft className="h-6 w-6" />
+                    </button>
+                    <h1 className="text-xl font-bold">設備詳情</h1>
+                </div>
+                <button 
+                    onClick={() => setShowQR(true)}
+                    className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg transition-colors flex items-center gap-2 font-bold text-sm"
+                    title="顯示 QR Code"
+                >
+                    <QrCode className="h-4 w-4" />
+                    <span>QR Code</span>
                 </button>
-                <h1 className="text-xl font-bold">設備詳情</h1>
             </div>
 
             <div className="p-6 space-y-6">
@@ -183,13 +187,10 @@ export const EquipmentDetailPage = () => {
                             <Activity className="h-4 w-4" />
                             <span className="text-xs font-bold uppercase tracking-wider">目前狀態</span>
                         </div>
-                        <span className={`inline-flex px-3 py-1 text-sm font-bold rounded-full
-                            ${equipment.status === 'AVAILABLE' ? 'bg-green-100 text-green-700' : 
-                            equipment.status === 'BORROWED' ? 'bg-blue-100 text-blue-700' : 
-                            equipment.status === 'IN_TRANSIT' ? 'bg-orange-100 text-orange-700 animate-pulse' : 
-                            equipment.status === 'TO_BE_MOVED' ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
-                            {statusMap[equipment.status] || equipment.status}
-                        </span>
+                        <EquipmentStatusBadge 
+                            status={equipment.status} 
+                            className={`text-sm px-3 py-1 ${equipment.status === 'IN_TRANSIT' ? 'animate-pulse' : ''}`}
+                        />
                     </div>
 
                     <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
@@ -367,22 +368,13 @@ export const EquipmentDetailPage = () => {
                                         <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase">
                                             <MapPin className="w-3 h-3" /> 交易時位置
                                         </div>
-                                        {txn.location_details?.full_path && (
-                                            <div className="text-[11px] text-gray-600 font-medium">
-                                                {txn.location_details.full_path}
-                                            </div>
-                                        )}
-                                        <div className="flex gap-1 mt-0.5">
-                                            {txn.zone || txn.cabinet || txn.number ? (
-                                                <>
-                                                    {txn.zone && <span className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[9px] font-bold text-gray-500">{txn.zone}</span>}
-                                                    {txn.cabinet && <span className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[9px] font-bold text-gray-500">{txn.cabinet}</span>}
-                                                    {txn.number && <span className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[9px] font-bold text-gray-500">{txn.number}</span>}
-                                                </>
-                                            ) : !txn.location_details && (
-                                                <span className="text-[9px] text-gray-400 italic">未知位置</span>
-                                            )}
-                                        </div>
+                                        <LocationDisplay 
+                                            location={txn.location_details}
+                                            zone={txn.zone}
+                                            cabinet={txn.cabinet}
+                                            number={txn.number}
+                                            placeholder="未知位置"
+                                        />
                                     </div>
                                 )}
 
@@ -508,6 +500,30 @@ export const EquipmentDetailPage = () => {
                     </div>
                 </form>
             </div>
+        </div>
+      )}
+      {/* QR Code Modal */}
+      {showQR && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full animate-in zoom-in-95 duration-200">
+            <h2 className="text-xl font-bold mb-4 text-gray-800">設備 QR Code</h2>
+            <div className="bg-white p-4 border-2 border-gray-100 inline-block mb-4 rounded-xl shadow-inner">
+              <QRCodeSVG 
+                value={window.location.href} 
+                size={200}
+                level="H"
+                includeMargin={true}
+              />
+            </div>
+            <p className="text-sm font-bold text-gray-800 mb-1">{equipment.name}</p>
+            <p className="text-xs text-gray-500 mb-6 font-mono">{equipment.uuid}</p>
+            <button
+              onClick={() => setShowQR(false)}
+              className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-colors"
+            >
+              關閉
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -37,33 +37,60 @@ class EquipmentViewSet(viewsets.ModelViewSet):
     lookup_field = 'uuid'
 
     def perform_update(self, serializer):
-        old_status = self.get_object().status
+        old_instance = self.get_object()
+        old_status = old_instance.status
+        old_location = old_instance.location
+        old_zone = old_instance.zone
+        old_cabinet = old_instance.cabinet
+        old_number = old_instance.number
+
         instance = serializer.save()
-        new_status = instance.status
         
-        # Detect movement related status changes
+        new_status = instance.status
+        new_location = instance.location
+        new_zone = instance.zone
+        new_cabinet = instance.cabinet
+        new_number = instance.number
+        
+        action_type = None
+        reason = ""
+
+        # Status based transitions
         if old_status != new_status:
-            action_type = None
             if new_status == Equipment.Status.IN_TRANSIT:
                 action_type = 'MOVE_START'
+                reason = f"Status changed from {old_status} to {new_status}"
             elif old_status == Equipment.Status.IN_TRANSIT and new_status == Equipment.Status.AVAILABLE:
                 action_type = 'MOVE_CONFIRM'
+                reason = f"Status changed from {old_status} to {new_status}"
+        
+        # Location based transitions (Direct Move or Correction)
+        # Only log if action_type is not yet set (to avoid double logging if covered by status change)
+        if not action_type and new_status == Equipment.Status.AVAILABLE:
+            location_changed = (old_location != new_location) or \
+                               (old_zone != new_zone) or \
+                               (old_cabinet != new_cabinet) or \
+                               (old_number != new_number)
             
-            if action_type:
-                # Create a transaction record with location snapshot
-                image = self.request.FILES.get('transaction_image')
-                Transaction.objects.create(
-                    equipment=instance,
-                    user=self.request.user,
-                    action=action_type,
-                    status=Transaction.Status.COMPLETED,
-                    image=image,
-                    location=instance.location,
-                    zone=instance.zone,
-                    cabinet=instance.cabinet,
-                    number=instance.number,
-                    reason=f"Status changed from {old_status} to {new_status}"
-                )
+            if location_changed:
+                action_type = 'MOVE_CONFIRM' # Treat direct location change as immediate move confirmation
+                reason = "Direct location update"
+        
+        if action_type:
+            # Create a transaction record with location snapshot
+            image = self.request.FILES.get('transaction_image')
+            Transaction.objects.create(
+                equipment=instance,
+                user=self.request.user,
+                action=action_type,
+                status=Transaction.Status.COMPLETED,
+                image=image,
+                location=instance.location,
+                zone=instance.zone,
+                cabinet=instance.cabinet,
+                number=instance.number,
+                reason=reason
+            )
 
     def get_queryset(self):
         queryset = Equipment.objects.all()

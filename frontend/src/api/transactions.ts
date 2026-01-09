@@ -20,9 +20,23 @@ export interface Transaction {
   equipment: string; // uuid
   user: number; // user id
   image?: string;
+  admin_verifier?: number;
+  location?: string;
+  location_details?: {
+    uuid: string;
+    name: string;
+    full_path: string;
+  };
+  zone?: string;
+  cabinet?: string;
+  number?: string;
   equipment_detail?: {
     uuid: string;
     name: string;
+    location?: string;
+    zone?: string;
+    cabinet?: string;
+    number?: string;
   };
   user_detail?: {
     id: number;
@@ -59,8 +73,8 @@ export const transactionsApi = {
     return response.data;
   },
 
-  approveReturn: async (id: number): Promise<Transaction> => {
-    const response = await client.post(`/transactions/${id}/approve-return/`);
+  approveReturn: async (id: number, data?: any): Promise<Transaction> => {
+    const response = await client.post(`/transactions/${id}/approve-return/`, data);
     return response.data;
   },
 

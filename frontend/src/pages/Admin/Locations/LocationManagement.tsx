@@ -2,548 +2,430 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getLocations, createLocation, updateLocation, deleteLocation } from '../../../api/locations';
 import { getEquipmentList, updateEquipment } from '../../../api/equipment';
-import type { Location, Equipment, PaginatedResponse } from '../../../types';
-import { QRCodeSVG } from 'qrcode.react';
-import { Box, Plus, Search, X, ArrowLeft, Warehouse } from 'lucide-react';
+import { getCategories } from '../../../api/categories';
+import type { Location, Equipment } from '../../../types';
+import { 
+    Box, Plus, Search, X, ArrowLeft, Warehouse, 
+    ArrowRightLeft, ChevronLeft, ChevronRight, 
+    MapPin, Edit, Trash2, List, Grid3X3, Save, ExternalLink
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import client from '../../../api/client';
+import { EquipmentStatusBadge } from '../../../components/Equipment/EquipmentStatusBadge';
+import { LocationDisplay } from '../../../components/Equipment/LocationDisplay';
 
 const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
 const LOCATION_CABINETS = Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']);
 const LOCATION_NUMBERS = Array.from({ length: 10 }, (_, i) => `${i + 1}號`).concat(['其他']);
 
+
+
 export const LocationManagement = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
-  const [newLocation, setNewLocation] = useState({ name: '', description: '', parent: '' });
-  const [showQR, setShowQR] = useState<string | null>(null);
-  const [inventoryLocation, setInventoryLocation] = useState<Location | null>(null);
-  const [addEquipmentId, setAddEquipmentId] = useState('');
-  const [isTargeting, setIsTargeting] = useState(false);
   
-  // Selection state for grid
-  const [zone, setZone] = useState('');
-  const [cabinet, setCabinet] = useState('');
-  const [number, setNumber] = useState('');
+  // Tabs: 'INVENTORY' (Equipment focus) or 'STRUCTURE' (Location focus)
+  const [activeTab, setActiveTab] = useState<'INVENTORY' | 'STRUCTURE'>('INVENTORY');
 
-  const { data: locations, isLoading } = useQuery({
+  // Inventory State
+  const [invPage, setInvPage] = useState(1);
+  const [invSearch, setInvSearch] = useState('');
+  const [invCategory, setInvSearchCategory] = useState('');
+  const [invLocation, setInvLocation] = useState('');
+  
+  // Location Structure State
+  const [isLocModalOpen, setIsLocModalOpen] = useState(false);
+  const [editingLoc, setEditingLoc] = useState<Partial<Location> | null>(null);
+
+  // Equipment Movement State
+  const [movingItem, setMovingItem] = useState<Equipment | null>(null);
+  const [isTargetMode, setIsTargetMode] = useState(false);
+  const [moveData, setMoveData] = useState({
+      location: '',
+      zone: '',
+      cabinet: '',
+      number: ''
+  });
+
+  // Queries
+  const { data: locations, isLoading: loadingLocs } = useQuery({
     queryKey: ['locations'],
     queryFn: () => getLocations(),
   });
 
-  const { data: inventory, isLoading: loadingInventory } = useQuery({
-    queryKey: ['equipment', 'location', inventoryLocation?.uuid],
-    queryFn: () => getEquipmentList(1, '', '', '', inventoryLocation?.uuid),
-    enabled: !!inventoryLocation,
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => getCategories(),
   });
 
-  const { data: targetedEquipment, isLoading: loadingTargeted } = useQuery({
-    queryKey: ['equipment', 'target_location', inventoryLocation?.uuid],
-    queryFn: async () => {
-        const { data } = await client.get<PaginatedResponse<Equipment>>('/equipment/', {
-            params: { target_location: inventoryLocation?.uuid }
-        });
-        return data;
-    },
-    enabled: !!inventoryLocation,
+  const { data: inventory, isLoading: loadingInv } = useQuery({
+    queryKey: ['equipment-inventory', invPage, invSearch, invCategory, invLocation],
+    queryFn: () => getEquipmentList(invPage, invSearch, invCategory, '', invLocation),
   });
 
-  const createMutation = useMutation({
-    mutationFn: createLocation,
+  // Mutations
+  const locMutation = useMutation({
+    mutationFn: ({ uuid, data }: { uuid?: string; data: any }) => 
+        uuid ? updateLocation(uuid, data) : createLocation(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['locations'] });
-      setNewLocation({ name: '', description: '', parent: '' });
-      setIsAddModalOpen(false);
-    },
+        queryClient.invalidateQueries({ queryKey: ['locations'] });
+        setIsLocModalOpen(false);
+        setEditingLoc(null);
+    }
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ uuid, data }: { uuid: string; data: Partial<Location> }) => updateLocation(uuid, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['locations'] });
-      setEditingLocation(null);
-    },
-  });
-
-  const deleteMutation = useMutation({
+  const deleteLocMutation = useMutation({
     mutationFn: deleteLocation,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['locations'] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['locations'] })
   });
 
-  const addToInventoryMutation = useMutation({
-    mutationFn: ({ uuid, location, isTarget, grid }: { uuid: string; location: string; isTarget: boolean; grid: any }) => {
-        const payload: any = isTarget ? { 
-            target_location: location,
-            target_zone: grid.zone,
-            target_cabinet: grid.cabinet,
-            target_number: grid.number,
-            status: 'TO_BE_MOVED' 
-        } : { 
-            location: location,
-            zone: grid.zone,
-            cabinet: grid.cabinet,
-            number: grid.number,
-            target_location: null,
-            target_zone: '',
-            target_cabinet: '',
-            target_number: '',
-            status: 'AVAILABLE'
-        };
-        return updateEquipment(uuid, payload);
-    },
+  const equipmentMutation = useMutation({
+    mutationFn: ({ uuid, data }: { uuid: string; data: any }) => updateEquipment(uuid, data),
     onSuccess: () => {
-      alert('操作成功');
-      setAddEquipmentId('');
-      setZone(''); setCabinet(''); setNumber('');
-      queryClient.invalidateQueries({ queryKey: ['equipment'] });
-    },
-    onError: (err: any) => {
-        alert('操作失敗: ' + (err.response?.data?.detail || '找不到設備或 UUID 錯誤'));
+        queryClient.invalidateQueries({ queryKey: ['equipment-inventory'] });
+        setMovingItem(null);
+        alert('位置資訊已更新');
     }
   });
 
-  const handleCreate = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate({
-      name: newLocation.name,
-      description: newLocation.description,
-      parent: newLocation.parent || undefined,
-    });
+  const handleOpenMove = (item: Equipment, targetMode: boolean) => {
+      setMovingItem(item);
+      setIsTargetMode(targetMode);
+      if (targetMode) {
+          setMoveData({
+              location: item.target_location || item.location || '',
+              zone: item.target_zone || '',
+              cabinet: item.target_cabinet || '',
+              number: item.target_number || '',
+          });
+      } else {
+          setMoveData({
+              location: item.location || '',
+              zone: item.zone || '',
+              cabinet: item.cabinet || '',
+              number: item.number || '',
+          });
+      }
   };
 
-  const handleUpdate = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingLocation) {
-      updateMutation.mutate({
-        uuid: editingLocation.uuid,
-        data: {
-          name: editingLocation.name,
-          description: editingLocation.description,
-          parent: editingLocation.parent || undefined,
-        },
-      });
-    }
+  const handleMoveAction = (isTarget: boolean) => {
+      if (!movingItem) return;
+
+      const payload: any = isTarget ? {
+          target_location: moveData.location || null,
+          target_zone: moveData.zone,
+          target_cabinet: moveData.cabinet,
+          target_number: moveData.number,
+          status: 'TO_BE_MOVED'
+      } : {
+          location: moveData.location || null,
+          zone: moveData.zone,
+          cabinet: moveData.cabinet,
+          number: moveData.number,
+          target_location: null,
+          target_zone: '',
+          target_cabinet: '',
+          target_number: '',
+          status: 'AVAILABLE'
+      };
+
+      equipmentMutation.mutate({ uuid: movingItem.uuid, data: payload });
   };
-
-  const handleAddEquipment = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!inventoryLocation || !addEquipmentId) return;
-      
-      const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-      const match = addEquipmentId.match(uuidPattern);
-      const uuid = match ? match[0] : addEquipmentId;
-
-      addToInventoryMutation.mutate({ 
-          uuid, 
-          location: inventoryLocation.uuid, 
-          isTarget: isTargeting,
-          grid: { zone, cabinet, number }
-      });
-  };
-
-  if (isLoading) return <div className="p-4">Loading locations...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <div className="bg-white shadow p-4 flex items-center justify-between sticky top-0 z-10">
+      <header className="bg-white shadow-sm px-4 py-4 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center">
-            <button onClick={() => navigate('/')} className="mr-4 text-gray-600 hover:text-primary">
+            <button onClick={() => navigate('/')} className="mr-4 text-gray-400 hover:text-primary transition-colors">
                 <ArrowLeft className="h-6 w-6" />
             </button>
-            <h1 className="text-xl font-bold flex items-center text-gray-800">
+            <h1 className="text-xl font-black flex items-center text-gray-800 tracking-tight">
                 <Warehouse className="mr-2 h-6 w-6 text-primary" />
                 儲存位置管理
             </h1>
         </div>
-        <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
-        >
-            <Plus className="h-5 w-5" /> 新增位置
-        </button>
-      </div>
-
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Locations List */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-                <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名稱</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">完整路徑</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">描述</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-                </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-                {locations?.map((location) => (
-                <tr key={location.uuid} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">{location.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{location.full_path}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{location.description}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                        onClick={() => setInventoryLocation(location)}
-                        className="text-green-600 hover:text-green-900 mr-4 inline-flex items-center gap-1"
-                    >
-                        <Box className="w-4 h-4" /> 庫存
-                    </button>
-                    <button
-                        onClick={() => setShowQR(location.uuid)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-4"
-                    >
-                        QR Code
-                    </button>
-                    <button
-                        onClick={() => setEditingLocation(location)}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
-                    >
-                        編輯
-                    </button>
-                    <button
-                        onClick={() => {
-                        if (window.confirm('確定要刪除此位置嗎？')) {
-                            deleteMutation.mutate(location.uuid);
-                        }
-                        }}
-                        className="text-red-600 hover:text-red-900"
-                    >
-                        刪除
-                    </button>
-                    </td>
-                </tr>
-                ))}
-            </tbody>
-            </table>
+        <div className="flex bg-gray-100 p-1 rounded-xl shadow-inner">
+            <button 
+                onClick={() => setActiveTab('INVENTORY')}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-black transition-all ${activeTab === 'INVENTORY' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+                <Grid3X3 className="w-4 h-4" /> 位置盤點
+            </button>
+            <button 
+                onClick={() => setActiveTab('STRUCTURE')}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-black transition-all ${activeTab === 'STRUCTURE' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+                <List className="w-4 h-4" /> 倉庫管理
+            </button>
         </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1">
+        {activeTab === 'INVENTORY' ? (
+            <div className="space-y-6">
+                {/* Filters */}
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center">
+                    <div className="relative flex-1 w-full">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <input 
+                            type="text" 
+                            placeholder="搜尋設備名稱或描述..." 
+                            className="w-full pl-9 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                            value={invSearch}
+                            onChange={e => { setInvSearch(e.target.value); setInvPage(1); }}
+                        />
+                    </div>
+                    <div className="flex gap-2 w-full md:w-auto">
+                        <select 
+                            className="flex-1 md:w-48 bg-gray-50 border-none rounded-xl px-3 py-2 text-sm font-bold outline-none"
+                            value={invLocation}
+                            onChange={e => { setInvLocation(e.target.value); setInvPage(1); }}
+                        >
+                            <option value="">所有倉庫位置</option>
+                            {locations?.map(loc => <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>)}
+                        </select>
+                        <select 
+                            className="flex-1 md:w-40 bg-gray-50 border-none rounded-xl px-3 py-2 text-sm font-bold outline-none"
+                            value={invCategory}
+                            onChange={e => { setInvSearchCategory(e.target.value); setInvPage(1); }}
+                        >
+                            <option value="">所有類別</option>
+                            {categories?.results?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                    </div>
+                </div>
+
+                {/* Equipment Table */}
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                            <thead>
+                                <tr className="bg-gray-50/50 border-b border-gray-100">
+                                    <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-widest">名稱 / 描述</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-widest">類別</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-widest">狀態</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-widest">目前位置</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-widest">目標目的地</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {loadingInv ? (
+                                    <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-400 italic font-bold">載入中...</td></tr>
+                                ) : inventory?.results.map((item: Equipment) => (
+                                    <tr key={item.uuid} className="hover:bg-gray-50/50 transition-colors group">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 shadow-inner">
+                                                    {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <Box className="w-full h-full p-2.5 text-gray-300" />}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <div className="text-sm font-black text-gray-800 truncate flex items-center gap-1">
+                                                        {item.name}
+                                                        <ExternalLink className="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100 cursor-pointer" onClick={() => window.open(`/equipment/${item.uuid}`, '_blank')} />
+                                                    </div>
+                                                    <div className="text-[10px] text-gray-400 truncate max-w-[180px]">{item.description || '無描述'}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded text-[10px] font-black">
+                                                {item.category_details?.name || '未分類'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <EquipmentStatusBadge status={item.status} />
+                                        </td>
+                                        <td 
+                                            className="px-6 py-4 cursor-pointer hover:bg-green-50/50 transition-colors group/cell"
+                                            onClick={() => handleOpenMove(item, false)}
+                                            title="點擊修改目前位置"
+                                        >
+                                            <div className="flex justify-between items-start gap-2">
+                                                <LocationDisplay 
+                                                    location={item.location_details}
+                                                    zone={item.zone}
+                                                    cabinet={item.cabinet}
+                                                    number={item.number}
+                                                />
+                                                <Edit className="w-3.5 h-3.5 text-slate-500 group-hover/cell:text-slate-900 transition-colors mt-0.5 flex-shrink-0" />
+                                            </div>
+                                        </td>
+                                        <td 
+                                            className="px-6 py-4 cursor-pointer hover:bg-orange-50/50 transition-colors group/cell"
+                                            onClick={() => handleOpenMove(item, true)}
+                                            title="點擊修改目標目的地"
+                                        >
+                                            <div className="flex justify-between items-start gap-2">
+                                                <LocationDisplay 
+                                                    isTarget
+                                                    location={item.target_location_details}
+                                                    zone={item.target_zone}
+                                                    cabinet={item.target_cabinet}
+                                                    number={item.target_number}
+                                                    placeholder="無目的地 (點擊設定)"
+                                                />
+                                                <Edit className="w-3.5 h-3.5 text-slate-500 group-hover/cell:text-slate-900 transition-colors mt-0.5 flex-shrink-0" />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Pagination */}
+                    {inventory && inventory.count > 10 && (
+                        <div className="p-4 border-t border-gray-50 flex items-center justify-between bg-gray-50/30">
+                            <p className="text-[10px] font-black text-gray-400 uppercase">
+                                顯示 {((invPage - 1) * 10) + 1} - {Math.min(invPage * 10, inventory.count)} 筆，共 {inventory.count} 筆
+                            </p>
+                            <div className="flex gap-2">
+                                <button onClick={() => setInvPage(p => p - 1)} disabled={!inventory.previous} className="p-2 bg-white border border-gray-200 rounded-lg disabled:opacity-30 shadow-sm"><ChevronLeft className="w-4 h-4" /></button>
+                                <span className="flex items-center px-4 text-xs font-black text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm">{invPage}</span>
+                                <button onClick={() => setInvPage(p => p + 1)} disabled={!inventory.next} className="p-2 bg-white border border-gray-200 rounded-lg disabled:opacity-30 shadow-sm"><ChevronRight className="w-4 h-4" /></button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left: Location Form / Tree Placeholder */}
+                <div className="lg:col-span-1 space-y-6">
+                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                        <h3 className="text-lg font-black text-gray-800 mb-4 flex items-center justify-between">
+                            倉庫架構管理
+                            <button onClick={() => { setEditingLoc({}); setIsLocModalOpen(true); }} className="bg-green-600 text-white p-1.5 rounded-lg shadow-lg hover:bg-green-700 transition-all"><Plus className="w-4 h-4" /></button>
+                        </h3>
+                        <p className="text-xs text-gray-400 mb-6 font-bold leading-relaxed">在這裡建立您的「倉庫 &gt; 櫃位 &gt; 層架」層級。具體的「區/櫃/號」可在設備詳情中細分。</p>
+                        
+                        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                            {loadingLocs ? (
+                                <div className="text-center py-4 text-gray-400 italic">載入中...</div>
+                            ) : locations?.map(loc => (
+                                <div key={loc.uuid} className="group p-3 bg-gray-50 rounded-2xl border border-transparent hover:border-primary/20 hover:bg-white hover:shadow-md transition-all flex items-center justify-between">
+                                    <div className="min-w-0">
+                                        <div className="text-sm font-black text-gray-700 truncate">{loc.name}</div>
+                                        <div className="text-[10px] text-gray-400 font-bold truncate">{loc.full_path}</div>
+                                    </div>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => { setEditingLoc(loc); setIsLocModalOpen(true); }} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg"><Edit className="w-3.5 h-3.5" /></button>
+                                        <button onClick={() => window.confirm('確定刪除？') && deleteLocMutation.mutate(loc.uuid)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right: Map or Stats Placeholder */}
+                <div className="lg:col-span-2">
+                    <div className="bg-primary/5 border-2 border-dashed border-primary/20 rounded-3xl h-full min-h-[400px] flex flex-col items-center justify-center text-center p-10">
+                        <div className="bg-white p-6 rounded-full shadow-xl shadow-primary/10 mb-6"><MapPin className="w-12 h-12 text-primary" /></div>
+                        <h4 className="text-xl font-black text-primary mb-2">視覺化地圖功能</h4>
+                        <p className="text-gray-500 text-sm max-w-sm font-bold">未來將支援上傳倉庫平面圖並在上面標記設備位置。目前請使用「位置盤點」標籤頁進行大量設備調撥。</p>
+                    </div>
+                </div>
+            </div>
+        )}
       </main>
 
-      {/* Add Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">新增位置</h2>
-                <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                    <X className="h-6 w-6" />
-                </button>
-            </div>
-            <form onSubmit={handleCreate} className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">位置名稱</label>
-                    <input
-                        type="text"
-                        placeholder="e.g., A區-01櫃"
-                        className="mt-1 block w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
-                        value={newLocation.name}
-                        onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
-                        required
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">描述</label>
-                    <input
-                        type="text"
-                        className="mt-1 block w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
-                        value={newLocation.description}
-                        onChange={(e) => setNewLocation({ ...newLocation, description: e.target.value })}
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">父級位置 (選填)</label>
-                    <select
-                        className="mt-1 block w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
-                        value={newLocation.parent}
-                        onChange={(e) => setNewLocation({ ...newLocation, parent: e.target.value })}
-                    >
-                        <option value="">無 (建立為頂層位置)</option>
-                        {locations?.map((loc) => (
-                        <option key={loc.uuid} value={loc.uuid}>
-                            {loc.full_path}
-                        </option>
-                        ))}
-                    </select>
-                </div>
-                <div className="flex justify-end gap-3 mt-6">
-                    <button
-                        type="button"
-                        onClick={() => setIsAddModalOpen(false)}
-                        className="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50"
-                    >
-                        取消
-                    </button>
-                    <button
-                        type="submit"
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                        disabled={createMutation.isPending}
-                    >
-                        {createMutation.isPending ? '儲存中...' : '建立位置'}
-                    </button>
-                </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Inventory Modal */}
-      {inventoryLocation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
+      {/* Move Modal (The core operational logic) */}
+      {movingItem && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="px-8 py-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
                     <div>
-                        <h3 className="text-lg font-bold text-gray-800">位置庫存管理</h3>
-                        <p className="text-sm text-gray-500">{inventoryLocation.full_path}</p>
+                        <h3 className="text-xl font-black text-gray-800 leading-tight">
+                            {isTargetMode ? '設定轉移目標' : '指派位置資訊'}
+                        </h3>
+                        <p className="text-xs text-gray-400 font-black uppercase tracking-widest mt-1">設備: {movingItem.name}</p>
                     </div>
-                    <button onClick={() => setInventoryLocation(null)} className="text-gray-400 hover:text-gray-600">
-                        <X className="h-6 w-6" />
-                    </button>
+                    <button onClick={() => setMovingItem(null)} className="bg-white p-2 rounded-2xl text-gray-400 hover:text-gray-600 shadow-sm transition-all"><X className="h-6 w-6" /></button>
                 </div>
                 
-                <div className="p-6 overflow-y-auto flex-1">
-                    {/* Add Item Form */}
-                    <form onSubmit={handleAddEquipment} className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="block text-sm font-medium text-blue-800">指定設備到此位置</label>
-                            <div className="flex bg-white rounded-md p-1 border border-blue-200">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setIsTargeting(false)}
-                                    className={`px-2 py-1 text-xs rounded transition-colors ${!isTargeting ? 'bg-blue-600 text-white' : 'text-blue-600'}`}
-                                >
-                                    直接入庫
-                                </button>
-                                <button 
-                                    type="button" 
-                                    onClick={() => setIsTargeting(true)}
-                                    className={`px-2 py-1 text-xs rounded transition-colors ${isTargeting ? 'bg-orange-600 text-white' : 'text-orange-600'}`}
-                                >
-                                    設為目標 (需移動)
-                                </button>
+                <div className="p-8 space-y-8">
+                    <div className="space-y-6">
+                        <div className="space-y-3">
+                            <label className="block text-xs font-black text-gray-600 uppercase tracking-widest px-1">具體格位資訊</label>
+                            <div className="grid grid-cols-3 gap-3">
+                                {[['區', 'zone'], ['櫃', 'cabinet'], ['號', 'number']].map(([label, field]) => (
+                                    <div key={field}>
+                                        <select 
+                                            className={`w-full bg-white border-2 border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-black focus:border-primary outline-none shadow-sm transition-all ${isTargetMode ? 'focus:border-orange-500' : 'focus:border-green-600'}`}
+                                            value={(moveData as any)[field]}
+                                            onChange={e => setMoveData({...moveData, [field]: e.target.value})}
+                                        >
+                                            <option value="">{label}</option>
+                                            {(field === 'zone' ? LOCATION_ZONES : field === 'cabinet' ? LOCATION_CABINETS : LOCATION_NUMBERS).map(o => <option key={o} value={o}>{o}</option>)}
+                                        </select>
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                        <div className="flex flex-col gap-3">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-                                <input 
-                                    type="text" 
-                                    placeholder={isTargeting ? "輸入/掃描設備 UUID 以設為目標..." : "掃描設備 QR Code 以立即入庫..."}
-                                    className="w-full pl-9 pr-4 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                    value={addEquipmentId}
-                                    onChange={e => setAddEquipmentId(e.target.value)}
-                                />
-                            </div>
-                            
-                            <div className="flex gap-2">
-                                <div className="grid grid-cols-3 gap-2 flex-1">
-                                    <select 
-                                        className="border border-blue-200 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={zone} onChange={e => setZone(e.target.value)}
-                                    >
-                                        <option value="">區</option>
-                                        {LOCATION_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
-                                    </select>
-                                    <select 
-                                        className="border border-blue-200 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={cabinet} onChange={e => setCabinet(e.target.value)}
-                                    >
-                                        <option value="">櫃</option>
-                                        {LOCATION_CABINETS.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                    <select 
-                                        className="border border-blue-200 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={number} onChange={e => setNumber(e.target.value)}
-                                    >
-                                        <option value="">號</option>
-                                        {LOCATION_NUMBERS.map(n => <option key={n} value={n}>{n}</option>)}
-                                    </select>
-                                </div>
-                                <button 
-                                    type="submit"
-                                    disabled={addToInventoryMutation.isPending}
-                                    className={`px-4 py-1.5 rounded-lg text-white text-sm font-bold flex items-center gap-2 transition-colors whitespace-nowrap ${isTargeting ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-                                >
-                                    <Plus className="h-4 w-4" /> {isTargeting ? '指定' : '入庫'}
-                                </button>
-                            </div>
-                        </div>
-                    </form>
+                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Current Inventory */}
-                        <div>
-                            <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                                <Box className="w-4 h-4 text-green-600" />
-                                在庫設備 ({inventory?.count || 0})
-                            </h4>
-                            {loadingInventory ? (
-                                <div className="text-center py-4 text-gray-500">載入中...</div>
-                            ) : inventory?.results && inventory.results.length > 0 ? (
-                                <div className="space-y-2">
-                                    {inventory.results.map((item: Equipment) => (
-                                        <div key={item.uuid} className="p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition-colors text-sm">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center shrink-0">
-                                                    {item.image ? (
-                                                        <img src={item.image} alt="" className="w-full h-full object-cover rounded" />
-                                                    ) : (
-                                                        <Box className="w-4 h-4 text-gray-400" />
-                                                    )}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="font-medium text-gray-900 leading-tight truncate">{item.name}</div>
-                                                    <div className="flex gap-1 mt-1">
-                                                        {item.zone && <span className="text-[9px] bg-gray-100 px-1 rounded">{item.zone}</span>}
-                                                        {item.cabinet && <span className="text-[9px] bg-gray-100 px-1 rounded">{item.cabinet}</span>}
-                                                        {item.number && <span className="text-[9px] bg-gray-100 px-1 rounded">{item.number}</span>}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-8 text-xs text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                                    無在庫設備
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Expected / Targeted Inventory */}
-                        <div>
-                            <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                                <Plus className="w-4 h-4 text-orange-600" />
-                                預計移入 ({targetedEquipment?.count || 0})
-                            </h4>
-                            {loadingTargeted ? (
-                                <div className="text-center py-4 text-gray-500">載入中...</div>
-                            ) : targetedEquipment?.results && targetedEquipment.results.length > 0 ? (
-                                <div className="space-y-2">
-                                    {targetedEquipment.results.map((item: Equipment) => (
-                                        <div key={item.uuid} className="p-3 bg-orange-50 border border-orange-100 rounded-lg text-sm">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-white rounded flex items-center justify-center shrink-0">
-                                                    <Box className="w-4 h-4 text-orange-400" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="font-medium text-gray-900 leading-tight truncate">{item.name}</div>
-                                                    <div className="text-[9px] text-orange-600 font-medium truncate mt-1">
-                                                        目前在: {item.location_details?.full_path || '未指定'}
-                                                    </div>
-                                                    <div className="flex gap-1 mt-1">
-                                                        {item.target_zone && <span className="text-[9px] bg-white border border-orange-200 text-orange-600 px-1 rounded font-bold">預計:{item.target_zone}</span>}
-                                                        {item.target_cabinet && <span className="text-[9px] bg-white border border-orange-200 text-orange-600 px-1 rounded font-bold">{item.target_cabinet}</span>}
-                                                        {item.target_number && <span className="text-[9px] bg-white border border-orange-200 text-orange-600 px-1 rounded font-bold">{item.target_number}</span>}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-8 text-xs text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                                    無預計移入設備
-                                </div>
-                            )}
-                        </div>
+                    <div className="flex flex-col gap-3 pt-4">
+                        {isTargetMode ? (
+                            <button 
+                                type="button" 
+                                disabled={equipmentMutation.isPending}
+                                onClick={() => handleMoveAction(true)}
+                                className="w-full py-4 bg-orange-600 text-white rounded-[1.25rem] font-black shadow-xl shadow-orange-100 hover:bg-orange-700 transition-all flex items-center justify-center gap-2"
+                            >
+                                <ArrowRightLeft className="w-4 h-4" /> 確認設定轉移目標
+                            </button>
+                        ) : (
+                            <button 
+                                type="button"
+                                disabled={equipmentMutation.isPending}
+                                onClick={() => handleMoveAction(false)}
+                                className="w-full py-4 bg-green-600 text-white rounded-[1.25rem] font-black shadow-xl shadow-green-100 hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Save className="w-4 h-4" /> 確認立即更新位置
+                            </button>
+                        )}
+                        <button type="button" onClick={() => setMovingItem(null)} className="w-full py-3 text-gray-400 font-bold hover:text-gray-600 transition-colors text-sm">取消</button>
                     </div>
                 </div>
             </div>
         </div>
       )}
 
-      {/* Edit Modal */}
-      {editingLocation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">編輯位置</h2>
-                <button onClick={() => setEditingLocation(null)} className="text-gray-400 hover:text-gray-600">
-                    <X className="h-6 w-6" />
-                </button>
-            </div>
-            <form onSubmit={handleUpdate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">名稱</label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={editingLocation.name}
-                  onChange={(e) => setEditingLocation({ ...editingLocation, name: e.target.value })}
-                  required
-                />
+      {/* Location Structure Add/Edit Modal */}
+      {isLocModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden p-8 animate-in slide-in-from-bottom-4 duration-200">
+                  <h3 className="text-xl font-black text-gray-800 mb-6">{editingLoc?.uuid ? '編輯儲存位置' : '新增儲存位置'}</h3>
+                  <form onSubmit={(e) => { e.preventDefault(); locMutation.mutate({ uuid: editingLoc?.uuid, data: editingLoc }); }} className="space-y-5">
+                      <div>
+                          <label className="block text-xs font-black text-gray-600 uppercase tracking-widest mb-2">位置名稱 (如: A棟-1F)</label>
+                          <input 
+                            type="text" required
+                            className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                            value={editingLoc?.name || ''} onChange={e => setEditingLoc({...editingLoc, name: e.target.value})}
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-black text-gray-600 uppercase tracking-widest mb-2">父級位置 (選填)</label>
+                          <select 
+                            className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                            value={editingLoc?.parent || ''} onChange={e => setEditingLoc({...editingLoc, parent: e.target.value})}
+                          >
+                              <option value="">無 (設為最上層)</option>
+                              {locations?.filter(l => l.uuid !== editingLoc?.uuid).map(loc => <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>)}
+                          </select>
+                      </div>
+                      <div className="flex gap-3 pt-4">
+                          <button type="button" onClick={() => setIsLocModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-100 rounded-2xl transition-all">取消</button>
+                          <button type="submit" className="flex-[2] py-3 bg-primary text-white font-black rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
+                              <Save className="w-4 h-4" /> 儲存變更
+                          </button>
+                      </div>
+                  </form>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">描述</label>
-                <textarea
-                  className="mt-1 block w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={editingLocation.description}
-                  onChange={(e) => setEditingLocation({ ...editingLocation, description: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">父級位置 (選填)</label>
-                <select
-                    className="mt-1 block w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={editingLocation.parent || ''}
-                    onChange={(e) => setEditingLocation({ ...editingLocation, parent: e.target.value })}
-                >
-                    <option value="">無 (設為頂層位置)</option>
-                    {locations?.filter(loc => loc.uuid !== editingLocation.uuid).map((loc) => (
-                    <option key={loc.uuid} value={loc.uuid}>
-                        {loc.full_path}
-                    </option>
-                    ))}
-                </select>
-              </div>
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setEditingLocation(null)}
-                  className="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-                  disabled={updateMutation.isPending}
-                >
-                  {updateMutation.isPending ? '更新中...' : '儲存變更'}
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
-
-      {/* QR Code Modal */}
-      {showQR && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full">
-            <h2 className="text-xl font-bold mb-4">位置 QR Code</h2>
-            <div className="bg-white p-4 border-2 border-gray-100 inline-block mb-4 rounded-xl">
-              <QRCodeSVG 
-                value={`location:${showQR}`} 
-                size={200}
-                level="H"
-                includeMargin={true}
-              />
-            </div>
-            <p className="text-sm font-medium text-gray-800 mb-1">{locations?.find(l => l.uuid === showQR)?.name}</p>
-            <p className="text-xs text-gray-500 mb-6">{locations?.find(l => l.uuid === showQR)?.full_path}</p>
-            <button
-              onClick={() => setShowQR(null)}
-              className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-colors"
-            >
-              關閉
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );

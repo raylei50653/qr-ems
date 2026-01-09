@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getLocationDetail } from '../../../api/locations';
 import { getEquipmentDetail, updateEquipment } from '../../../api/equipment';
+import type { Equipment } from '../../../types';
 import { ArrowLeft, MapPin, Box, CheckCircle, QrCode } from 'lucide-react';
 
 const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];

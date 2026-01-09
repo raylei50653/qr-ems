@@ -5,6 +5,8 @@ import { getCategories } from '../../api/categories';
 import { useAuthStore } from '../../store/useAuthStore';
 import { LogOut, Search, QrCode, ScanLine, Users, Shield, Box, ChevronLeft, ChevronRight, Filter, Warehouse } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { EquipmentStatusBadge } from '../../components/Equipment/EquipmentStatusBadge';
+import { LocationDisplay } from '../../components/Equipment/LocationDisplay';
 
 const STATUSES = [
   { value: '', label: '所有狀態' },
@@ -36,16 +38,7 @@ export const Dashboard = () => {
     queryFn: getCategories,
   });
 
-  const statusMap: Record<string, string> = {
-    AVAILABLE: '可借用',
-    BORROWED: '已借出',
-    PENDING_RETURN: '待歸還',
-    MAINTENANCE: '維護中',
-    TO_BE_MOVED: '需移動',
-    IN_TRANSIT: '移動中',
-    LOST: '遺失',
-    DISPOSED: '已報廢',
-  };
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -70,6 +63,7 @@ export const Dashboard = () => {
                     <Warehouse className="h-5 w-5" />
                     <span className="hidden sm:inline">位置管理</span>
                 </Link>
+
             </>
           )}
           {user?.role === 'ADMIN' && (
@@ -155,6 +149,8 @@ export const Dashboard = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名稱 / 描述</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">類別</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">狀態</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">目前位置</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">目標目的地</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">持有者</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                 </tr>
@@ -172,11 +168,25 @@ export const Dashboard = () => {
                         </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${item.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' : 
-                          item.status === 'BORROWED' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {statusMap[item.status] || item.status}
-                      </span>
+                      <EquipmentStatusBadge status={item.status} />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                        <LocationDisplay 
+                            location={item.location_details}
+                            zone={item.zone}
+                            cabinet={item.cabinet}
+                            number={item.number}
+                        />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                        <LocationDisplay 
+                            isTarget
+                            location={item.target_location_details}
+                            zone={item.target_zone}
+                            cabinet={item.target_cabinet}
+                            number={item.target_number}
+                            placeholder="無"
+                        />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
                       {item.current_possession?.username || '-'}

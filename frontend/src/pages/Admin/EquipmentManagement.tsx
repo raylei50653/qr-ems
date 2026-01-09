@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentList, updateEquipment, createEquipment } from '../../api/equipment';
-import { getLocations } from '../../api/locations';
+
 import { getCategories } from '../../api/categories';
 import type { Equipment, Category } from '../../types';
-import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter, Camera, MapPin, Trash2, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
+import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter, Camera, Trash2, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { EquipmentStatusBadge } from '../../components/Equipment/EquipmentStatusBadge';
+import { LocationDisplay } from '../../components/Equipment/LocationDisplay';
 
 const STATUSES = [
   { value: '', label: '所有狀態' },
@@ -30,9 +32,7 @@ const EDIT_STATUSES = [
   { value: 'DISPOSED', label: '已報廢' },
 ];
 
-const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
-const LOCATION_CABINETS = Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']);
-const LOCATION_NUMBERS = Array.from({ length: 10 }, (_, i) => `${i + 1}號`).concat(['其他']);
+
 
 export const EquipmentManagement = () => {
   const navigate = useNavigate();
@@ -57,10 +57,7 @@ export const EquipmentManagement = () => {
     queryFn: getCategories,
   });
 
-  const { data: locations } = useQuery({
-    queryKey: ['locations'],
-    queryFn: () => getLocations(),
-  });
+
 
   const updateMutation = useMutation({
     mutationFn: ({ uuid, data }: { uuid: string; data: Partial<Equipment> | FormData }) => updateEquipment(uuid, data),
@@ -102,14 +99,6 @@ export const EquipmentManagement = () => {
         description: '', 
         category: undefined, 
         status: 'AVAILABLE',
-        location: '',
-        target_location: '',
-        zone: '',
-        cabinet: '',
-        number: '',
-        target_zone: '',
-        target_cabinet: '',
-        target_number: ''
     });
     setSelectedFile(null);
     setIsModalOpen(true);
@@ -125,20 +114,7 @@ export const EquipmentManagement = () => {
     
     if (editingItem.category) formData.append('category', editingItem.category.toString());
     
-    const hasTarget = !!(editingItem.target_zone || editingItem.target_cabinet || editingItem.target_number);
-    const finalStatus = hasTarget ? 'TO_BE_MOVED' : (editingItem.status || 'AVAILABLE');
-    formData.append('status', finalStatus);
-
-    formData.append('location', editingItem.location || '');
-    const targetLoc = hasTarget ? (editingItem.location || '') : '';
-    formData.append('target_location', targetLoc);
-    
-    formData.append('zone', editingItem.zone || '');
-    formData.append('cabinet', editingItem.cabinet || '');
-    formData.append('number', editingItem.number || '');
-    formData.append('target_zone', editingItem.target_zone || '');
-    formData.append('target_cabinet', editingItem.target_cabinet || '');
-    formData.append('target_number', editingItem.target_number || '');
+    formData.append('status', editingItem.status || 'AVAILABLE');
 
     if (selectedFile) {
         formData.append('image', selectedFile);
@@ -164,6 +140,7 @@ export const EquipmentManagement = () => {
             </h1>
         </div>
         <div className="flex gap-2 text-sm">
+
             <button onClick={() => navigate('/admin/categories')} className="bg-indigo-50 text-indigo-600 border border-indigo-100 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-100 transition-colors font-bold shadow-sm">
                 <Tag className="h-5 w-5" /> 類別管理
             </button>
@@ -207,6 +184,8 @@ export const EquipmentManagement = () => {
                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">名稱 / 描述</th>
                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">類別</th>
                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">狀態</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">目前位置</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">目標目的地</th>
                   <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-widest">操作</th>
                 </tr>
               </thead>
@@ -223,11 +202,25 @@ export const EquipmentManagement = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-bold rounded-full 
-                        ${item.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' : 
-                          item.status === 'BORROWED' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {statusMap[item.status] || item.status}
-                      </span>
+                      <EquipmentStatusBadge status={item.status} />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                        <LocationDisplay 
+                            location={item.location_details}
+                            zone={item.zone}
+                            cabinet={item.cabinet}
+                            number={item.number}
+                        />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                        <LocationDisplay 
+                            isTarget
+                            location={item.target_location_details}
+                            zone={item.target_zone}
+                            cabinet={item.target_cabinet}
+                            number={item.target_number}
+                            placeholder="無"
+                        />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right font-medium">
                       <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 transition-colors flex items-center gap-1 justify-end ml-auto">
@@ -282,34 +275,7 @@ export const EquipmentManagement = () => {
                             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1">描述</label>
                             <textarea className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 font-bold focus:border-primary outline-none transition-colors" rows={3} value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
                         </div>
-                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3 shadow-inner">
-                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">目前存放位置</h4>
-                            <div className="grid grid-cols-3 gap-3">
-                                {[['區', editingItem.zone, 'zone'], ['櫃', editingItem.cabinet, 'cabinet'], ['號', editingItem.number, 'number']].map(([label, val, field]) => (
-                                    <div key={field as string}>
-                                        <label className="block text-[10px] font-bold text-gray-400 mb-1">{label as string}</label>
-                                        <select className="w-full border-2 border-white rounded-xl px-2 py-2 text-sm font-bold shadow-sm focus:border-primary outline-none" value={(val as string) || ''} onChange={e => setEditingItem({...editingItem, [field as string]: e.target.value})}>
-                                            <option value="">選擇</option>
-                                            {(field === 'zone' ? LOCATION_ZONES : field === 'cabinet' ? LOCATION_CABINETS : LOCATION_NUMBERS).map(o => <option key={o} value={o}>{o}</option>)}
-                                        </select>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 space-y-3 shadow-inner">
-                            <h4 className="text-xs font-black text-orange-400 uppercase tracking-widest">目標目的地</h4>
-                            <div className="grid grid-cols-3 gap-3">
-                                {[['目標區', editingItem.target_zone, 'target_zone'], ['目標櫃', editingItem.target_cabinet, 'target_cabinet'], ['目標號', editingItem.target_number, 'target_number']].map(([label, val, field]) => (
-                                    <div key={field as string}>
-                                        <label className="block text-[10px] font-bold text-orange-300 mb-1">{label as string}</label>
-                                        <select className="w-full border-2 border-white rounded-xl px-2 py-2 text-sm font-bold shadow-sm focus:border-orange-400 outline-none" value={(val as string) || ''} onChange={e => setEditingItem({...editingItem, [field as string]: e.target.value})}>
-                                            <option value="">選擇</option>
-                                            {(field === 'target_zone' ? LOCATION_ZONES : field === 'target_cabinet' ? LOCATION_CABINETS : LOCATION_NUMBERS).map(o => <option key={o} value={o}>{o}</option>)}
-                                        </select>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+
                         <div>
                             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">設備圖片</label>
                             <label className="cursor-pointer flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-200 rounded-3xl hover:border-primary hover:bg-primary/5 transition-all relative overflow-hidden bg-gray-50/50 group">
@@ -352,13 +318,4 @@ export const EquipmentManagement = () => {
   );
 };
 
-const statusMap: Record<string, string> = {
-    AVAILABLE: '可借用',
-    BORROWED: '已借出',
-    PENDING_RETURN: '待歸還',
-    MAINTENANCE: '維護中',
-    TO_BE_MOVED: '需移動',
-    IN_TRANSIT: '移動中',
-    LOST: '遺失',
-    DISPOSED: '已報廢',
-};
+
