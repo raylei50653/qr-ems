@@ -144,7 +144,8 @@ export const EquipmentDetailPage = () => {
     <div className="min-h-screen bg-gray-50 p-4 text-gray-900">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-            <div className="bg-primary px-6 py-4 flex items-center justify-between text-white">
+            {/* Header */}
+            <div className="bg-primary px-6 py-4 flex items-center justify-between text-white sticky top-0 z-10 shadow-sm">
                 <div className="flex items-center">
                     <button onClick={handleBack} className="mr-4 hover:bg-white/10 p-1 rounded transition-colors">
                         <ArrowLeft className="h-6 w-6" />
@@ -153,7 +154,7 @@ export const EquipmentDetailPage = () => {
                 </div>
                 <button 
                     onClick={() => setShowQR(true)}
-                    className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg transition-colors flex items-center gap-2 font-bold text-sm"
+                    className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg transition-colors flex items-center gap-2 font-bold text-sm shadow-sm backdrop-blur-sm"
                     title="顯示 QR Code"
                 >
                     <QrCode className="h-4 w-4" />

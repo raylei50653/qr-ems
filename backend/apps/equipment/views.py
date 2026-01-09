@@ -9,6 +9,7 @@ from .serializers import EquipmentSerializer, CategorySerializer
 from apps.users.models import User
 from apps.transactions.serializers import TransactionSerializer
 from apps.transactions.models import Transaction
+from apps.locations.models import Location
 from decouple import config
 
 class IsManagerOrReadOnly(permissions.BasePermission):
@@ -104,7 +105,19 @@ class EquipmentViewSet(viewsets.ModelViewSet):
         if status:
             queryset = queryset.filter(status=status)
         if location:
-            queryset = queryset.filter(location__uuid=location)
+            try:
+                target_loc = Location.objects.get(uuid=location)
+                descendants = [target_loc.uuid]
+                queue = [target_loc]
+                while queue:
+                    current = queue.pop(0)
+                    children = current.children.all()
+                    for child in children:
+                        descendants.append(child.uuid)
+                        queue.append(child)
+                queryset = queryset.filter(location__uuid__in=descendants)
+            except Location.DoesNotExist:
+                queryset = queryset.none()
         if target_location:
             queryset = queryset.filter(target_location__uuid=target_location)
             

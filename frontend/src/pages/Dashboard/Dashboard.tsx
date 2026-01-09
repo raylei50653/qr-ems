@@ -145,14 +145,14 @@ export const Dashboard = () => {
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名稱 / 描述</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">類別</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">狀態</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">目前位置</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">目標目的地</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">持有者</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                <tr className="text-xs font-black text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left">名稱 / 描述</th>
+                  <th className="px-6 py-3 text-left">類別</th>
+                  <th className="px-6 py-3 text-left">狀態</th>
+                  <th className="px-6 py-3 text-left hidden md:table-cell">目前位置</th>
+                  <th className="px-6 py-3 text-left hidden md:table-cell">目標目的地</th>
+                  <th className="px-6 py-3 text-left hidden sm:table-cell">持有者</th>
+                  <th className="px-6 py-3 text-right">操作</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
