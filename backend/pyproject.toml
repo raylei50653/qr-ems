@@ -26,4 +26,21 @@ dependencies = [
 [tool.uv]
 dev-dependencies = [
     "pytest>=8.0",
+    "coverage>=7.0",
 ]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "*/migrations/*",
+    "*/tests.py",
+    "*/test_*.py",
+    "manage.py",
+    "config/*",
+    "fix_borrowed_data.py",
+    "generate_test_data.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

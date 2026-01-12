@@ -1,4 +1,4 @@
-.PHONY: help install dev-back dev-front migrate superuser test build-front clean
+.PHONY: help install dev-back dev-front migrate superuser test-back test-front build-front clean
 
 # 變數定義
 BACKEND_DIR = backend
@@ -14,7 +14,8 @@ help:
 	@echo "  make dev-front  : 啟動 Vite 前端開發伺服器 (port 5173)"
 	@echo "  make migrate    : 執行後端資料庫遷移"
 	@echo "  make superuser  : 建立預設管理員帳號 (admin/admin)"
-	@echo "  make test       : 執行後端單元測試"
+	@echo "  make test-back  : 執行後端單元測試與覆蓋率報告"
+	@echo "  make test-front : 執行前端單元測試"
 	@echo "  make build-front: 建置前端生產版本"
 	@echo "  make clean      : 清理暫存檔 (__pycache__, dist 等)"
 	@echo "  make up         : 使用 Docker Compose 啟動所有服務"
@@ -60,15 +61,21 @@ dev-front:
 
 migrate:
 	@echo ">>> Running Migrations..."
-	cd $(BACKEND_DIR) && uv run python manage.py migrate
+	docker-compose exec backend uv run python manage.py migrate
 
 superuser:
 	@echo ">>> Creating Superuser (admin/admin)..."
-	cd $(BACKEND_DIR) && uv run python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@example.com', 'admin')"
+	docker-compose exec backend uv run python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@example.com', 'admin')"
 
-test:
-	@echo ">>> Running Backend Tests..."
-	cd $(BACKEND_DIR) && uv run python manage.py test
+test-back:
+	@echo ">>> Running Backend Tests with Coverage..."
+	docker-compose exec backend uv run coverage run manage.py test
+	@echo ">>> Generating Coverage Report..."
+	docker-compose exec backend uv run coverage report
+
+test-front:
+	@echo ">>> Running Frontend Tests..."
+	cd $(FRONTEND_DIR) && pnpm test run
 
 build-front:
 	@echo ">>> Building Frontend..."
