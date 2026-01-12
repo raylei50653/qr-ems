@@ -9,7 +9,9 @@ import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter, Camera, Trash2, Ch
 import { useNavigate } from 'react-router-dom';
 import { EquipmentStatusBadge } from '../../components/Equipment/EquipmentStatusBadge';
 import { LocationDisplay } from '../../components/Equipment/LocationDisplay';
+import { compressImage } from '../../utils/imageCompression';
 
+// ... (STATUSES and EDIT_STATUSES constants remain same)
 const STATUSES = [
   { value: '', label: '所有狀態' },
   { value: 'AVAILABLE', label: '可借用' },
@@ -33,8 +35,6 @@ const EDIT_STATUSES = [
   { value: 'DISPOSED', label: '已報廢' },
 ];
 
-
-
 export const EquipmentManagement = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -48,6 +48,7 @@ export const EquipmentManagement = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Partial<Equipment> | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['equipment', page, search, category, status, location],
@@ -116,7 +117,7 @@ export const EquipmentManagement = () => {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
 
@@ -139,8 +140,18 @@ export const EquipmentManagement = () => {
     if (editingItem.number) formData.append('number', editingItem.number);
 
     if (selectedFile) {
-        formData.append('image', selectedFile);
-        formData.append('transaction_image', selectedFile);
+        setIsCompressing(true);
+        try {
+            const compressedFile = await compressImage(selectedFile);
+            formData.append('image', compressedFile);
+            formData.append('transaction_image', compressedFile);
+        } catch (error) {
+            console.error("Compression failed, using original", error);
+            formData.append('image', selectedFile);
+            formData.append('transaction_image', selectedFile);
+        } finally {
+            setIsCompressing(false);
+        }
     }
 
     if (editingItem.uuid) {
@@ -152,6 +163,7 @@ export const EquipmentManagement = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* ... (Header and Main content remains same) ... */}
       <div className="bg-white shadow p-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center">
             <button onClick={() => navigate('/', { replace: true })} className="mr-4 text-gray-600 hover:text-primary">
@@ -375,8 +387,8 @@ export const EquipmentManagement = () => {
                     </div>
                     <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 shrink-0">
                         <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 border-2 border-gray-200 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition-all">取消</button>
-                        <button type="submit" className="px-8 py-2 bg-primary text-white rounded-xl font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all" disabled={updateMutation.isPending || createMutation.isPending}>
-                            <Save className="h-4 w-4 mr-2 inline" />{updateMutation.isPending || createMutation.isPending ? '儲存中...' : '儲存'}
+                        <button type="submit" className="px-8 py-2 bg-primary text-white rounded-xl font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all" disabled={updateMutation.isPending || createMutation.isPending || isCompressing}>
+                            <Save className="h-4 w-4 mr-2 inline" />{isCompressing ? '處理圖片中...' : (updateMutation.isPending || createMutation.isPending ? '儲存中...' : '儲存')}
                         </button>
                     </div>
                 </form>

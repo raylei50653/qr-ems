@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { getEquipmentDetail } from '../../api/equipment';
 import { transactionsApi } from '../../api/transactions';
 import { ArrowLeft, Calendar, FileText, AlertCircle, Camera } from 'lucide-react';
+import { compressImage } from '../../utils/imageCompression';
 
 export const BorrowPage = () => {
   const { uuid } = useParams<{ uuid: string }>();
@@ -11,6 +12,7 @@ export const BorrowPage = () => {
   const [dueDate, setDueDate] = useState('');
   const [reason, setReason] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
 
   // Fetch Equipment Details
   const { data: equipment, isLoading, error } = useQuery({
@@ -32,7 +34,7 @@ export const BorrowPage = () => {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uuid) return;
 
@@ -40,8 +42,18 @@ export const BorrowPage = () => {
     formData.append('equipment_uuid', uuid);
     if (dueDate) formData.append('due_date', new Date(dueDate).toISOString());
     formData.append('reason', reason || '');
+    
     if (selectedFile) {
-        formData.append('image', selectedFile);
+        setIsCompressing(true);
+        try {
+            const compressedFile = await compressImage(selectedFile);
+            formData.append('image', compressedFile);
+        } catch (error) {
+            console.error("Compression failed, using original file", error);
+            formData.append('image', selectedFile);
+        } finally {
+            setIsCompressing(false);
+        }
     }
 
     borrowMutation.mutate(formData);
@@ -177,14 +189,14 @@ export const BorrowPage = () => {
 
            <button
              type="submit"
-             disabled={equipment.status !== 'AVAILABLE' || borrowMutation.isPending}
+             disabled={equipment.status !== 'AVAILABLE' || borrowMutation.isPending || isCompressing}
              className={`w-full py-3 px-4 rounded-lg font-medium text-white shadow-sm transition-all
-               ${(equipment.status !== 'AVAILABLE' || borrowMutation.isPending)
+               ${(equipment.status !== 'AVAILABLE' || borrowMutation.isPending || isCompressing)
                  ? 'bg-gray-400 cursor-not-allowed' 
                  : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
                }`}
            >
-             {borrowMutation.isPending ? '提交中...' : '確認借用'}
+             {isCompressing ? '處理圖片中...' : (borrowMutation.isPending ? '提交中...' : '確認借用')}
            </button>
 
         </form>

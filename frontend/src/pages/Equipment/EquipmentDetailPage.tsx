@@ -14,6 +14,7 @@ import { EquipmentStatusBadge } from '../../components/Equipment/EquipmentStatus
 import { LocationDisplay } from '../../components/Equipment/LocationDisplay';
 import { QRCodeSVG } from 'qrcode.react';
 import { QRCodeScannerModal } from '../../components/Scan/QRCodeScannerModal';
+import { compressImage } from '../../utils/imageCompression';
 
 const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
 const LOCATION_CABINETS = Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']);
@@ -36,6 +37,7 @@ export const EquipmentDetailPage = () => {
   const [targetNumber, setTargetNumber] = useState('');
   const [verifyLocationId, setVerifyLocationId] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
 
 
 
@@ -114,7 +116,7 @@ export const EquipmentDetailPage = () => {
     moveMutation.mutate({ uuid, data: formData });
   };
 
-  const handleConfirmAction = (e: React.FormEvent) => {
+  const handleConfirmAction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uuid || !equipment) return;
 
@@ -134,7 +136,16 @@ export const EquipmentDetailPage = () => {
     }
 
     if (selectedFile) {
-        formData.append('transaction_image', selectedFile);
+        setIsCompressing(true);
+        try {
+            const compressedFile = await compressImage(selectedFile);
+            formData.append('transaction_image', compressedFile);
+        } catch (error) {
+            console.error("Compression failed, using original", error);
+            formData.append('transaction_image', selectedFile);
+        } finally {
+            setIsCompressing(false);
+        }
     }
 
     moveMutation.mutate({ uuid, data: formData });
