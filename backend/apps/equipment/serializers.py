@@ -17,11 +17,13 @@ class AttachmentSerializer(serializers.ModelSerializer):
 class EquipmentSerializer(serializers.ModelSerializer):
     attachments = AttachmentSerializer(many=True, read_only=True)
     current_possession = serializers.SerializerMethodField()
-    image = serializers.SerializerMethodField()
     location_details = LocationSerializer(source='location', read_only=True)
     target_location_details = LocationSerializer(source='target_location', read_only=True)
     category_details = CategorySerializer(source='category', read_only=True)
     
+    # Use standard ImageField to allow uploads
+    image = serializers.ImageField(required=False, allow_null=True)
+
     # Explicitly define fields to handle empty strings from FormData
     category = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(), 
@@ -47,12 +49,15 @@ class EquipmentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['uuid', 'created_at', 'updated_at']
 
-    def get_image(self, obj):
-        if not obj.image:
-            return None
-        # Return only the path part (e.g., /api/media/equipment_images/file.jpg)
-        # This prevents absolute URLs containing internal Docker hostnames like 'backend:8000'
-        return obj.image.url.replace('http://backend:8000', '').replace('https://backend:8000', '')
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Apply custom image URL logic for the output JSON
+        image_url = ret.get('image')
+        if image_url:
+            # If serving locally via Docker, the URL might be http://backend:8000/...
+            if 'backend:8000' in image_url:
+                ret['image'] = image_url.replace('http://backend:8000', '').replace('https://backend:8000', '')
+        return ret
 
     def get_current_possession(self, obj):
         # We assume the 'transactions' related name is available

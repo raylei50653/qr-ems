@@ -9,11 +9,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-key-change-me')
-
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
+# SECRET_KEY is required in production
+SECRET_KEY = config('SECRET_KEY', default='')
+if not DEBUG and not SECRET_KEY:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("The SECRET_KEY setting must not be empty when DEBUG is False.")
+elif not SECRET_KEY:
+    SECRET_KEY = 'django-insecure-dev-only-key'
+
+# ALLOWED_HOSTS parsing with better defaults
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+if not DEBUG and '*' in ALLOWED_HOSTS:
+    # Potentially dangerous in production, but we'll let it pass if explicitly set. 
+    # Usually better to be strict.
+    pass
 
 
 # Application definition
@@ -30,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
     'corsheaders',
+    'storages',
 
     # Local
     'apps.users',
@@ -116,11 +128,54 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+USE_S3 = config('USE_S3', default=False, cast=bool)
 
-MEDIA_URL = '/api/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+if USE_S3:
+    # Cloudflare R2 / S3 Configuration
+    AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL')
+    
+    # R2 compatibility settings
+    AWS_S3_SIGNATURE_VERSION = 's3v4'
+    AWS_S3_REGION_NAME = 'auto'  # R2 uses 'auto'
+    AWS_S3_FILE_OVERWRITE = False # Ensure unique filenames
+    AWS_QUERYSTRING_AUTH = False  # Disable signed URLs for public access
+    
+    # Custom domain for public access (optional, if you have a custom domain on R2)
+    AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN', default=None)
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "location": "media", # Store in 'media' folder within bucket
+                "default_acl": None, # R2 doesn't support ACLs
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage", # Keep static files local/in container usually better for perf unless serving via CDN
+        },
+    }
+    
+    if AWS_S3_CUSTOM_DOMAIN:
+        MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+    else:
+        # Fallback to direct bucket URL or endpoint
+        MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/media/'
+
+    STATIC_URL = 'static/'
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+else:
+    # Local Storage
+    STATIC_URL = 'static/'
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+    MEDIA_URL = '/api/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -157,6 +212,29 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
-# Proxy Settings
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# --- Production Security Headers ---
+if not DEBUG:
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    X_FRAME_OPTIONS = 'DENY'
+else:
+    X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# JWT Settings
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+}
