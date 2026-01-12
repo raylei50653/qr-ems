@@ -22,6 +22,7 @@
     *   QR Code 生成 (`/api/v1/equipment/{uuid}/qr/`)。
     *   歷史紀錄 (`/api/v1/equipment/{uuid}/history/`)。
     *   分類與狀態篩選。
+    *   **架構**: 使用 Service Layer (`services.py`) 處理狀態變更與 Transaction 紀錄。
 *   **`transactions`**: 借還流程邏輯。
     *   借用 (`borrow`)、歸還申請 (`return-request`)。
     *   管理員審核 (`approve-return`, `reject-return`)。
@@ -54,7 +55,14 @@ uv run python manage.py runserver 0.0.0.0:8000
 uv run python manage.py createsuperuser
 ```
 
-### 5. 生成測試資料
+### 5. 執行測試 (Testing)
+建議在 Docker 環境中執行以確保環境一致性：
+```bash
+# 在專案根目錄執行
+docker-compose exec backend uv run python manage.py test
+```
+
+### 6. 生成測試資料
 ```bash
 uv run python generate_test_data.py
 ```

@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Equipment, Category
 from .serializers import EquipmentSerializer, CategorySerializer
+from .services import update_equipment_with_transaction
 from apps.users.models import User
 from apps.transactions.serializers import TransactionSerializer
 from apps.transactions.models import Transaction
@@ -30,68 +31,28 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class EquipmentViewSet(viewsets.ModelViewSet):
     queryset = Equipment.objects.all()
     serializer_class = EquipmentSerializer
-    permission_classes = [IsManagerOrReadOnly]
+    # Permission logic moved to get_permissions
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'status', 'created_at']
     ordering = ['-created_at']
     lookup_field = 'uuid'
 
+    def get_permissions(self):
+        if self.action in ['create', 'destroy', 'bulk_delete']:
+            permission_classes = [IsManagerOrReadOnly]
+        else:
+            # Allow all authenticated users to view and update (move) equipment
+            permission_classes = [permissions.IsAuthenticated]
+        return [permission() for permission in permission_classes]
+
     def perform_update(self, serializer):
-        old_instance = self.get_object()
-        old_status = old_instance.status
-        old_location = old_instance.location
-        old_zone = old_instance.zone
-        old_cabinet = old_instance.cabinet
-        old_number = old_instance.number
-
-        instance = serializer.save()
-        
-        new_status = instance.status
-        new_location = instance.location
-        new_zone = instance.zone
-        new_cabinet = instance.cabinet
-        new_number = instance.number
-        
-        action_type = None
-        reason = ""
-
-        # Status based transitions
-        if old_status != new_status:
-            if new_status == Equipment.Status.IN_TRANSIT:
-                action_type = 'MOVE_START'
-                reason = f"Status changed from {old_status} to {new_status}"
-            elif old_status == Equipment.Status.IN_TRANSIT and new_status == Equipment.Status.AVAILABLE:
-                action_type = 'MOVE_CONFIRM'
-                reason = f"Status changed from {old_status} to {new_status}"
-        
-        # Location based transitions (Direct Move or Correction)
-        # Only log if action_type is not yet set (to avoid double logging if covered by status change)
-        if not action_type and new_status == Equipment.Status.AVAILABLE:
-            location_changed = (old_location != new_location) or \
-                               (old_zone != new_zone) or \
-                               (old_cabinet != new_cabinet) or \
-                               (old_number != new_number)
-            
-            if location_changed:
-                action_type = 'MOVE_CONFIRM' # Treat direct location change as immediate move confirmation
-                reason = "Direct location update"
-        
-        if action_type:
-            # Create a transaction record with location snapshot
-            image = self.request.FILES.get('transaction_image')
-            Transaction.objects.create(
-                equipment=instance,
-                user=self.request.user,
-                action=action_type,
-                status=Transaction.Status.COMPLETED,
-                image=image,
-                location=instance.location,
-                zone=instance.zone,
-                cabinet=instance.cabinet,
-                number=instance.number,
-                reason=reason
-            )
+        image = self.request.FILES.get('transaction_image')
+        update_equipment_with_transaction(
+            serializer=serializer,
+            user=self.request.user,
+            image=image
+        )
 
     def get_queryset(self):
         queryset = Equipment.objects.all()
@@ -99,11 +60,20 @@ class EquipmentViewSet(viewsets.ModelViewSet):
         status = self.request.query_params.get('status')
         location = self.request.query_params.get('location')
         target_location = self.request.query_params.get('target_location')
+        zone = self.request.query_params.get('zone')
+        cabinet = self.request.query_params.get('cabinet')
+        number = self.request.query_params.get('number')
         
         if category:
             queryset = queryset.filter(category=category)
         if status:
             queryset = queryset.filter(status=status)
+        if zone:
+            queryset = queryset.filter(zone=zone)
+        if cabinet:
+            queryset = queryset.filter(cabinet=cabinet)
+        if number:
+            queryset = queryset.filter(number=number)
         if location:
             try:
                 target_loc = Location.objects.get(uuid=location)

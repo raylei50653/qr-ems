@@ -30,6 +30,7 @@
 
 ### 🏗️ 現代化技術架構
 *   **Backend:** Python 3.12, Django 6, Django REST Framework (DRF), PostgreSQL.
+    *   **Service Layer Pattern:** 採用 Service Layer 架構 (如 `apps/equipment/services.py`) 將複雜的業務邏輯與 Transaction 管理從 ViewSet 抽離，確保資料一致性並提高可測試性。
 *   **Frontend:** React 19, TypeScript, Vite, Tailwind CSS.
 *   **DevOps:** Docker Compose 全端容器化, Cloudflare Tunnel (Zero Trust) 公網穿透.
 
@@ -80,6 +81,25 @@ make superuser
 # 或直接使用 Docker
 docker-compose exec backend uv run python manage.py createsuperuser
 ```
+
+---
+
+## 🧪 測試 (Testing)
+
+本專案建議在 Docker 容器環境中執行測試，以確保環境一致性並避免本地依賴問題。
+
+### 執行後端測試
+確保服務已啟動 (`make up`)，然後執行：
+
+```bash
+# 執行所有後端測試
+docker-compose exec backend uv run python manage.py test
+
+# 執行特定 App 的測試 (例如 equipment)
+docker-compose exec backend uv run python manage.py test apps.equipment
+```
+
+> **注意**: 若使用 `make test` 指令，請確保本地已正確安裝 Python 與 `uv` 環境，否則可能會因權限或路徑問題失敗。推薦優先使用 Docker 指令。
 
 ---
 
