@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
+from apps.common.utils import compress_image
 
 class Transaction(models.Model):
     class Action(models.TextChoices):
@@ -79,3 +80,20 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"{self.action} - {self.equipment.name} by {self.user.username}"
+
+    def save(self, *args, **kwargs):
+        # Compress image if it's new or changed
+        if self.image:
+            try:
+                this = Transaction.objects.get(pk=self.pk)
+                if this.image != self.image:
+                    compressed = compress_image(self.image)
+                    if compressed:
+                        self.image.save(compressed.name, compressed, save=False)
+            except Transaction.DoesNotExist:
+                # New instance
+                compressed = compress_image(self.image)
+                if compressed:
+                    self.image.save(compressed.name, compressed, save=False)
+        
+        super().save(*args, **kwargs)

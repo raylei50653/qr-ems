@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from apps.common.utils import compress_image
 
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="類別名稱")
@@ -83,6 +84,24 @@ class Equipment(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        # Compress image if it's new or changed
+        if self.image:
+            # Check if this is a new instance or image has changed
+            try:
+                this = Equipment.objects.get(pk=self.pk)
+                if this.image != self.image:
+                    compressed = compress_image(self.image)
+                    if compressed:
+                        self.image.save(compressed.name, compressed, save=False)
+            except Equipment.DoesNotExist:
+                # New instance
+                compressed = compress_image(self.image)
+                if compressed:
+                    self.image.save(compressed.name, compressed, save=False)
+        
+        super().save(*args, **kwargs)
 
 class Attachment(models.Model):
     equipment = models.ForeignKey(
