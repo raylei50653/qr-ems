@@ -14,16 +14,18 @@ export const LocationConfirmPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const locationUuid = searchParams.get('location_uuid');
+  const locationUuidRaw = searchParams.get('location_uuid') || '';
+  // Split potential params from UUID if passed as a single string (for safety)
+  const locationUuid = locationUuidRaw.split('&')[0];
   
   const [equipmentId, setAddEquipmentId] = useState('');
   const [scannedEquipment, setScannedEquipment] = useState<Equipment | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // New state for detailed location
-  const [zone, setZone] = useState('');
-  const [cabinet, setCabinet] = useState('');
-  const [number, setNumber] = useState('');
+  const [zone, setZone] = useState(searchParams.get('zone') || '');
+  const [cabinet, setCabinet] = useState(searchParams.get('cabinet') || '');
+  const [number, setNumber] = useState(searchParams.get('number') || '');
 
   const { data: location, isLoading: loadingLocation } = useQuery({
     queryKey: ['location', locationUuid],

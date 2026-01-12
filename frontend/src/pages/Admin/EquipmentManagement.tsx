@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentList, updateEquipment, createEquipment } from '../../api/equipment';
+import { getLocations } from '../../api/locations';
 
 import { getCategories } from '../../api/categories';
 import type { Equipment, Category } from '../../types';
-import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter, Camera, Trash2, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
+import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter, Camera, Trash2, ChevronLeft, ChevronRight, Tag, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { EquipmentStatusBadge } from '../../components/Equipment/EquipmentStatusBadge';
 import { LocationDisplay } from '../../components/Equipment/LocationDisplay';
@@ -40,6 +41,7 @@ export const EquipmentManagement = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(''); // Selected category ID
+  const [location, setLocation] = useState('');
   const [status, setStatus] = useState('');
   
   // Modal State
@@ -48,13 +50,18 @@ export const EquipmentManagement = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['equipment', page, search, category, status],
-    queryFn: () => getEquipmentList(page, search, category, status),
+    queryKey: ['equipment', page, search, category, status, location],
+    queryFn: () => getEquipmentList(page, search, category, status, location),
   });
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: getCategories,
+  });
+
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: () => getLocations(),
   });
 
 
@@ -84,7 +91,11 @@ export const EquipmentManagement = () => {
   });
 
   const handleEdit = (item: Equipment) => {
-    setEditingItem(item);
+    setEditingItem({
+        ...item,
+        category: item.category || item.category_details?.id,
+        location: item.location || item.location_details?.uuid
+    });
     setSelectedFile(null);
     setIsModalOpen(true);
   };
@@ -99,6 +110,7 @@ export const EquipmentManagement = () => {
         description: '', 
         category: undefined, 
         status: 'AVAILABLE',
+        location: location || '',
     });
     setSelectedFile(null);
     setIsModalOpen(true);
@@ -112,12 +124,23 @@ export const EquipmentManagement = () => {
     formData.append('name', editingItem.name || '');
     formData.append('description', editingItem.description || '');
     
-    if (editingItem.category) formData.append('category', editingItem.category.toString());
+    if (editingItem.category) {
+        formData.append('category', editingItem.category.toString());
+    }
     
     formData.append('status', editingItem.status || 'AVAILABLE');
+    
+    if (editingItem.location) {
+        formData.append('location', editingItem.location);
+    }
+    
+    if (editingItem.zone) formData.append('zone', editingItem.zone);
+    if (editingItem.cabinet) formData.append('cabinet', editingItem.cabinet);
+    if (editingItem.number) formData.append('number', editingItem.number);
 
     if (selectedFile) {
         formData.append('image', selectedFile);
+        formData.append('transaction_image', selectedFile);
     }
 
     if (editingItem.uuid) {
@@ -160,9 +183,17 @@ export const EquipmentManagement = () => {
                 <input type="text" placeholder="搜尋設備..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm" />
             </div>
             <div className="flex gap-2">
-                    <select
-                        value={category}
-                        onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+                <select
+                    value={location}
+                    onChange={(e) => { setLocation(e.target.value); setPage(1); }}
+                    className="bg-white border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
+                >
+                    <option value="">所有倉庫</option>
+                    {locations?.map(loc => <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>)}
+                </select>
+                <select
+                    value={category}
+                    onChange={(e) => { setCategory(e.target.value); setPage(1); }}
                         className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded-lg leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
                     >
                         <option value="">所有類別</option>
@@ -223,9 +254,14 @@ export const EquipmentManagement = () => {
                         />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right font-medium">
-                      <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 transition-colors flex items-center gap-1 justify-end ml-auto">
-                        <Edit className="h-4 w-4" /> 編輯
-                      </button>
+                      <div className="flex items-center justify-end gap-3">
+                        <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 transition-colors flex items-center gap-1">
+                          <Edit className="h-4 w-4" /> 編輯
+                        </button>
+                        <button onClick={() => handleDelete(item)} className="text-red-600 hover:text-red-900 transition-colors flex items-center gap-1">
+                          <Trash2 className="h-4 w-4" /> 刪除
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -301,6 +337,39 @@ export const EquipmentManagement = () => {
                                 <select className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 font-bold focus:border-primary outline-none transition-colors bg-white" value={editingItem.status || 'AVAILABLE'} onChange={e => setEditingItem({...editingItem, status: e.target.value as any})}>
                                     {EDIT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                                 </select>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 pt-2 border-t border-gray-100">
+                            <div>
+                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1">存放倉庫</label>
+                                <select 
+                                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 font-bold focus:border-primary outline-none transition-colors bg-white" 
+                                    value={editingItem.location || ''} 
+                                    onChange={e => setEditingItem({...editingItem, location: e.target.value})}
+                                >
+                                    <option value="">請選擇倉庫</option>
+                                    {locations?.map(loc => <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>)}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                                {[
+                                    { label: '區', field: 'zone', options: ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'] },
+                                    { label: '櫃', field: 'cabinet', options: Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']) },
+                                    { label: '號', field: 'number', options: Array.from({ length: 10 }, (_, i) => `${i + 1}號`).concat(['其他']) }
+                                ].map((cfg) => (
+                                    <div key={cfg.field}>
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{cfg.label}</label>
+                                        <select 
+                                            className="w-full border-2 border-gray-100 rounded-lg px-2 py-2 text-xs font-bold focus:border-primary outline-none bg-white"
+                                            value={(editingItem as any)[cfg.field] || ''}
+                                            onChange={e => setEditingItem({...editingItem, [cfg.field]: e.target.value})}
+                                        >
+                                            <option value="">無</option>
+                                            {cfg.options.map(o => <option key={o} value={o}>{o}</option>)}
+                                        </select>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>

@@ -4,11 +4,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentDetail, getEquipmentHistory, updateEquipment } from '../../api/equipment';
 import { getLocations } from '../../api/locations';
 import { transactionsApi } from '../../api/transactions';
-import { ArrowLeft, Box, Activity, User as UserIcon, History, Clock, MapPin, Move, X, Save, Camera, QrCode } from 'lucide-react';
+import { 
+    ArrowLeft, Box, Activity, User as UserIcon, 
+    History, Clock, MapPin, Move, X, Save, 
+    Camera, QrCode, AlertCircle, CheckCircle 
+} from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { EquipmentStatusBadge } from '../../components/Equipment/EquipmentStatusBadge';
 import { LocationDisplay } from '../../components/Equipment/LocationDisplay';
 import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeScannerModal } from '../../components/Scan/QRCodeScannerModal';
 
 const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
 const LOCATION_CABINETS = Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']);
@@ -22,12 +27,14 @@ export const EquipmentDetailPage = () => {
   
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [confirmType, setConfirmType] = useState<'START' | 'FINISH'>('START');
   
   const [targetZone, setTargetZone] = useState('');
   const [targetCabinet, setTargetCabinet] = useState('');
   const [targetNumber, setTargetNumber] = useState('');
+  const [verifyLocationId, setVerifyLocationId] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
 
@@ -457,8 +464,74 @@ export const EquipmentDetailPage = () => {
                 
                 <form onSubmit={handleConfirmAction} className="p-6 space-y-6">
                     <div className="space-y-6">
+                        {confirmType === 'START' ? (
+                            <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                                <label className="block text-[10px] font-black text-blue-600 mb-2 uppercase tracking-widest">
+                                    請掃描「設備」QR Code 以確認取貨
+                                </label>
+                                <div className="flex gap-2">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setIsScannerOpen(true)}
+                                        className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                                    >
+                                        <Camera className="w-4 h-4" /> 啟動相機掃描
+                                    </button>
+                                </div>
+                                {verifyLocationId && (
+                                    <div className="mt-3 p-2 bg-white rounded-xl border border-blue-100 text-center">
+                                        <p className="text-[10px] text-gray-400 mb-1">掃描結果</p>
+                                        <p className="font-mono text-xs text-gray-800 break-all mb-2">{verifyLocationId}</p>
+                                        
+                                        {verifyLocationId.includes(equipment.uuid) ? (
+                                            <span className="inline-flex items-center gap-1 text-xs font-black text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">
+                                                <CheckCircle className="w-3.5 h-3.5" /> 設備驗證成功
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 text-xs font-black text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-100">
+                                                <AlertCircle className="w-3.5 h-3.5" /> 設備不符
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="bg-green-50 p-4 rounded-2xl border border-green-100">
+                                <label className="block text-[10px] font-black text-green-600 mb-2 uppercase tracking-widest">
+                                    請掃描「目標位置」QR Code 以確認送達
+                                </label>
+                                <div className="flex gap-2">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setIsScannerOpen(true)}
+                                        className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                                    >
+                                        <Camera className="w-4 h-4" /> 啟動相機掃描
+                                    </button>
+                                </div>
+                                {verifyLocationId && (
+                                    <div className="mt-3 p-2 bg-white rounded-xl border border-green-100 text-center">
+                                        <p className="text-[10px] text-gray-400 mb-1">掃描結果</p>
+                                        <p className="font-mono text-xs text-gray-800 break-all mb-2">{verifyLocationId}</p>
+
+                                        {verifyLocationId.includes(equipment.target_location || '') ? (
+                                            <span className="inline-flex items-center gap-1 text-xs font-black text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">
+                                                <CheckCircle className="w-3.5 h-3.5" /> 位置驗證成功
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 text-xs font-black text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-100">
+                                                <AlertCircle className="w-3.5 h-3.5" /> 位置不符
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className={`p-5 rounded-2xl border-2 ${confirmType === 'START' ? 'bg-orange-50/20 border-orange-100' : 'bg-green-50/20 border-green-100'}`}>
-                            <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">目標目的地</p>
+                            <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">
+                                {confirmType === 'START' ? '預計移往目的地' : '確認送達位置'}
+                            </p>
                             <p className="text-lg font-black text-gray-800 leading-tight">
                                 {equipment.target_location_details?.full_path || equipment.location_details?.full_path || '倉庫'}
                             </p>
@@ -490,11 +563,15 @@ export const EquipmentDetailPage = () => {
                     </div>
 
                     <div className="flex gap-3">
-                        <button type="button" onClick={() => { setIsConfirmModalOpen(false); setSelectedFile(null); }} className="flex-1 py-3 border-2 border-gray-100 rounded-xl text-gray-600 font-bold hover:bg-gray-50 transition-all">取消</button>
+                        <button type="button" onClick={() => { setIsConfirmModalOpen(false); setSelectedFile(null); setVerifyLocationId(''); }} className="flex-1 py-3 border-2 border-gray-100 rounded-xl text-gray-600 font-bold hover:bg-gray-50 transition-all">取消</button>
                         <button 
                             type="submit" 
                             className={`flex-[2] py-3 rounded-xl text-white font-black transition-all shadow-lg ${confirmType === 'START' ? 'bg-orange-600 hover:bg-orange-700 shadow-orange-100' : 'bg-green-600 hover:bg-green-700 shadow-green-100'}`}
-                            disabled={moveMutation.isPending}
+                            disabled={
+                                moveMutation.isPending || 
+                                (confirmType === 'START' && !verifyLocationId.includes(equipment.uuid)) ||
+                                (confirmType === 'FINISH' && !verifyLocationId.includes(equipment.target_location || ''))
+                            }
                         >
                             {moveMutation.isPending ? '處理中...' : (confirmType === 'START' ? '確認並開始搬運' : '確認已送達')}
                         </button>
@@ -503,6 +580,18 @@ export const EquipmentDetailPage = () => {
             </div>
         </div>
       )}
+      
+      {/* Scanner Modal */}
+      <QRCodeScannerModal 
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScanSuccess={(text) => {
+            setVerifyLocationId(text);
+            setIsScannerOpen(false);
+        }}
+        title={confirmType === 'START' ? '掃描設備標籤' : '掃描位置標籤'}
+        instructions={confirmType === 'START' ? '請對準設備上的 QR Code' : '請對準目的地的位置 QR Code'}
+      />
       {/* QR Code Modal */}
       {showQR && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">

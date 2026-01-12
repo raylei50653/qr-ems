@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getLocations } from '../../../api/locations';
+import { getLocations, createLocation, updateLocation, deleteLocation } from '../../../api/locations';
 import { getEquipmentList, updateEquipment } from '../../../api/equipment';
 import { getCategories } from '../../../api/categories';
-import type { Equipment } from '../../../types';
+import type { Equipment, Location } from '../../../types';
 import { 
     Box, Search, X, ArrowLeft, Warehouse, 
     ArrowRightLeft, ChevronLeft, ChevronRight, 
-    MapPin, Edit, Save, ExternalLink
+    MapPin, Edit, Save, ExternalLink, QrCode, Plus, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { EquipmentStatusBadge } from '../../../components/Equipment/EquipmentStatusBadge';
 import { LocationDisplay } from '../../../components/Equipment/LocationDisplay';
+import { QRCodeSVG } from 'qrcode.react';
 
 const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
 const LOCATION_CABINETS = Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']);
@@ -26,8 +27,14 @@ export const LocationManagement = () => {
   const [invSearch, setInvSearch] = useState('');
   const [invCategory, setInvSearchCategory] = useState('');
   const [invLocation, setInvLocation] = useState('');
+  const [invZone, setInvZone] = useState('');
+  const [invCabinet, setInvCabinet] = useState('');
+  const [invNumber, setInvNumber] = useState('');
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
   // Modals State
+  const [isLocModalOpen, setIsLocModalOpen] = useState(false);
+  const [editingLoc, setEditingLoc] = useState<Partial<Location> | null>(null);
   const [movingItem, setMovingItem] = useState<Equipment | null>(null);
   const [isTargetMode, setIsTargetMode] = useState(false);
   const [moveData, setMoveData] = useState({ location: '', zone: '', cabinet: '', number: '' });
@@ -44,11 +51,41 @@ export const LocationManagement = () => {
   });
 
   const { data: inventory, isLoading: loadingInv } = useQuery({
-    queryKey: ['equipment-inventory', invPage, invSearch, invCategory, invLocation],
-    queryFn: () => getEquipmentList(invPage, invSearch, invCategory, '', invLocation),
+    queryKey: ['equipment-inventory', invPage, invSearch, invCategory, invLocation, invZone, invCabinet, invNumber],
+    queryFn: () => getEquipmentList(invPage, invSearch, invCategory, '', invLocation, invZone, invCabinet, invNumber),
   });
 
   // Mutations
+  const locMutation = useMutation({
+    mutationFn: ({ uuid, data }: { uuid?: string; data: any }) => 
+        uuid ? updateLocation(uuid, data) : createLocation(data),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['locations'] });
+        setIsLocModalOpen(false);
+        setEditingLoc(null);
+    }
+  });
+
+  const deleteLocMutation = useMutation({
+    mutationFn: (uuid: string) => deleteLocation(uuid),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['locations'] });
+        setInvLocation(''); // Reset selected location after delete
+        alert('倉庫位置已成功刪除');
+    },
+    onError: (err: any) => {
+        alert('刪除失敗：' + (err.response?.data?.detail || '請確認此位置是否仍有子位置或關聯設備'));
+    }
+  });
+
+  const handleDeleteLocation = () => {
+      if (!invLocation) return;
+      const loc = locations?.find(l => l.uuid === invLocation);
+      if (window.confirm(`確定要刪除「${loc?.name}」嗎？此操作不可復原，且必須確保此倉庫內無任何設備。`)) {
+          deleteLocMutation.mutate(invLocation);
+      }
+  };
+
   const equipmentMutation = useMutation({
     mutationFn: ({ uuid, data }: { uuid: string; data: any }) => updateEquipment(uuid, data),
     onSuccess: () => {
@@ -107,6 +144,21 @@ export const LocationManagement = () => {
                 <h1 className="text-xl font-black tracking-tight">儲存位置盤點</h1>
             </div>
         </div>
+        
+        <div className="flex items-center gap-3">
+            <button 
+                onClick={() => navigate('/admin/locations/qrcode')}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-black flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+            >
+                <QrCode className="w-4 h-4" /> 生成標籤
+            </button>
+            <button 
+                onClick={() => { setEditingLoc({}); setIsLocModalOpen(true); }}
+                className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-black flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg shadow-green-100"
+            >
+                <Plus className="w-4 h-4" /> 新增倉庫
+            </button>
+        </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1 overflow-y-auto">
@@ -123,17 +175,77 @@ export const LocationManagement = () => {
                         onChange={e => { setInvSearch(e.target.value); setInvPage(1); }}
                     />
                 </div>
-                <div className="flex gap-2 w-full md:w-auto">
+                <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
+                    <div className="flex gap-2 flex-1 md:flex-initial">
+                        <select 
+                            className="flex-1 md:w-48 bg-gray-50 border-none rounded-xl px-3 py-2 text-sm font-bold outline-none"
+                            value={invLocation}
+                            onChange={e => { setInvLocation(e.target.value); setInvPage(1); }}
+                        >
+                            <option value="">所有倉庫位置</option>
+                            {locations?.map(loc => <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>)}
+                        </select>
+                        <button 
+                            onClick={() => setIsQRModalOpen(true)}
+                            disabled={!invLocation}
+                            className={`p-2 rounded-xl transition-colors shrink-0 ${invLocation ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200' : 'bg-gray-100 text-gray-300'}`}
+                            title={invLocation ? "顯示位置 QR Code" : "請先選擇位置"}
+                        >
+                            <QrCode className="w-5 h-5" />
+                        </button>
+                        <button 
+                            onClick={() => {
+                                const loc = locations?.find(l => l.uuid === invLocation);
+                                if (loc) {
+                                    setEditingLoc(loc);
+                                    setIsLocModalOpen(true);
+                                }
+                            }}
+                            disabled={!invLocation}
+                            className={`p-2 rounded-xl transition-colors shrink-0 ${invLocation ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' : 'bg-gray-100 text-gray-300'}`}
+                            title={invLocation ? "編輯此位置名稱/層級" : "請先選擇位置"}
+                        >
+                            <Edit className="w-5 h-5" />
+                        </button>
+                        <button 
+                            onClick={handleDeleteLocation}
+                            disabled={!invLocation}
+                            className={`p-2 rounded-xl transition-colors shrink-0 ${invLocation ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'bg-gray-100 text-gray-300'}`}
+                            title={invLocation ? "刪除此倉庫位置" : "請先選擇位置"}
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                        <select 
+                            className="bg-gray-50 border-none rounded-xl px-3 py-2 text-sm font-bold outline-none w-20"
+                            value={invZone}
+                            onChange={e => { setInvZone(e.target.value); setInvPage(1); }}
+                        >
+                            <option value="">區</option>
+                            {LOCATION_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
+                        </select>
+                        <select 
+                            className="bg-gray-50 border-none rounded-xl px-3 py-2 text-sm font-bold outline-none w-20"
+                            value={invCabinet}
+                            onChange={e => { setInvCabinet(e.target.value); setInvPage(1); }}
+                        >
+                            <option value="">櫃</option>
+                            {LOCATION_CABINETS.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <select 
+                            className="bg-gray-50 border-none rounded-xl px-3 py-2 text-sm font-bold outline-none w-20"
+                            value={invNumber}
+                            onChange={e => { setInvNumber(e.target.value); setInvPage(1); }}
+                        >
+                            <option value="">號</option>
+                            {LOCATION_NUMBERS.map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                    </div>
+
                     <select 
-                        className="flex-1 md:w-48 bg-gray-50 border-none rounded-xl px-3 py-2 text-sm font-bold outline-none"
-                        value={invLocation}
-                        onChange={e => { setInvLocation(e.target.value); setInvPage(1); }}
-                    >
-                        <option value="">所有倉庫位置</option>
-                        {locations?.map(loc => <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>)}
-                    </select>
-                    <select 
-                        className="flex-1 md:w-40 bg-gray-50 border-none rounded-xl px-3 py-2 text-sm font-bold outline-none"
+                        className="flex-1 md:w-40 bg-gray-50 border-none rounded-xl px-4 py-2.5 text-sm font-bold outline-none"
                         value={invCategory}
                         onChange={e => { setInvSearchCategory(e.target.value); setInvPage(1); }}
                     >
@@ -262,6 +374,75 @@ export const LocationManagement = () => {
                 </div>
             </div>
         </div>
+      )}
+      {/* Location QR Code Modal */}
+      {isQRModalOpen && invLocation && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden p-8 animate-in zoom-in-95 duration-200 text-center">
+                  <h3 className="text-xl font-black text-gray-800 mb-2">位置 QR Code</h3>
+                  <p className="text-xs text-gray-400 font-bold mb-6">掃描此碼可快速將設備歸還至此位置</p>
+                  
+                  <div className="bg-white p-4 border-2 border-gray-100 inline-block mb-6 rounded-2xl shadow-inner">
+                      <QRCodeSVG 
+                          value={`location:${invLocation}`} 
+                          size={200}
+                          level="H"
+                          includeMargin={true}
+                      />
+                  </div>
+                  
+                  <div className="mb-6">
+                      <p className="text-sm font-black text-gray-800">
+                          {locations?.find(l => l.uuid === invLocation)?.name}
+                      </p>
+                      <p className="text-[10px] text-gray-400 font-mono mt-1">
+                          {locations?.find(l => l.uuid === invLocation)?.full_path}
+                      </p>
+                  </div>
+
+                  <button 
+                      onClick={() => setIsQRModalOpen(false)} 
+                      className="w-full py-3 bg-gray-900 text-white rounded-2xl font-black hover:bg-black transition-all shadow-lg"
+                  >
+                      關閉
+                  </button>
+              </div>
+          </div>
+      )}
+
+      {/* Location Modal */}
+      {isLocModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden p-8 animate-in slide-in-from-bottom-4 duration-200">
+                  <h3 className="text-xl font-black text-gray-800 mb-6">{editingLoc?.uuid ? '編輯儲存位置' : '新增儲存位置'}</h3>
+                  <form onSubmit={(e) => { e.preventDefault(); locMutation.mutate({ uuid: editingLoc?.uuid, data: editingLoc }); }} className="space-y-5">
+                      <div>
+                          <label className="block text-xs font-black text-gray-600 uppercase tracking-widest mb-2">位置名稱 (如: A棟-1F)</label>
+                          <input 
+                            type="text" required
+                            className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                            value={editingLoc?.name || ''} onChange={e => setEditingLoc({...editingLoc, name: e.target.value})}
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-black text-gray-600 uppercase tracking-widest mb-2">父級位置 (選填)</label>
+                          <select 
+                            className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                            value={editingLoc?.parent || ''} onChange={e => setEditingLoc({...editingLoc, parent: e.target.value})}
+                          >
+                              <option value="">無 (設為最上層)</option>
+                              {locations?.filter(l => l.uuid !== editingLoc?.uuid).map(loc => <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>)}
+                          </select>
+                      </div>
+                      <div className="flex gap-3 pt-4">
+                          <button type="button" onClick={() => setIsLocModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-100 rounded-2xl transition-all">取消</button>
+                          <button type="submit" className="flex-[2] py-3 bg-primary text-white font-black rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
+                              <Save className="w-4 h-4" /> 儲存變更
+                          </button>
+                      </div>
+                  </form>
+              </div>
+          </div>
       )}
     </div>
   );

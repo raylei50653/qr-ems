@@ -46,10 +46,12 @@ export const ScanPage = () => {
 
   const handleScanSuccess = (decodedText: string) => {
     if (decodedText.startsWith('location:')) {
-      const locationUuid = decodedText.split(':')[1];
+      const locationContent = decodedText.substring(9); // Everything after 'location:'
       stopScanning();
-      // Navigate to a new page that handles equipment placement at this location
-      navigate(`/admin/locations/confirm?location_uuid=${locationUuid}`);
+      
+      // If content has parameters (e.g. uuid&zone=A...), pass them correctly
+      // Our confirm page uses location_uuid param
+      navigate(`/admin/locations/confirm?location_uuid=${locationContent}`);
       return;
     }
 

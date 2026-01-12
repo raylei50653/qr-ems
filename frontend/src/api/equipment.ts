@@ -2,9 +2,18 @@ import client from './client';
 import type { Equipment, PaginatedResponse } from '../types';
 import type { Transaction } from './transactions';
 
-export const getEquipmentList = async (page = 1, search = '', category = '', status = '', location = '') => {
+export const getEquipmentList = async (
+  page = 1, 
+  search = '', 
+  category = '', 
+  status = '', 
+  location = '',
+  zone = '',
+  cabinet = '',
+  number = ''
+) => {
   const { data } = await client.get<PaginatedResponse<Equipment>>('/equipment/', {
-    params: { page, search, category, status, location },
+    params: { page, search, category, status, location, zone, cabinet, number },
   });
   return data;
 };
@@ -22,7 +31,7 @@ export const getEquipmentHistory = async (uuid: string) => {
 export const createEquipment = async (data: Partial<Equipment> | FormData) => {
   const isFormData = data instanceof FormData;
   const { data: response } = await client.post<Equipment>('/equipment/', data, {
-    headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    headers: isFormData ? { 'Content-Type': undefined } : undefined,
   });
   return response;
 };
@@ -30,7 +39,7 @@ export const createEquipment = async (data: Partial<Equipment> | FormData) => {
 export const updateEquipment = async (uuid: string, data: Partial<Equipment> | FormData) => {
   const isFormData = data instanceof FormData;
   const { data: response } = await client.patch<Equipment>(`/equipment/${uuid}/`, data, {
-    headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    headers: isFormData ? { 'Content-Type': undefined } : undefined,
   });
   return response;
 };

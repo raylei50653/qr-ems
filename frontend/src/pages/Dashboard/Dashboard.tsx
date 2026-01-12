@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getEquipmentList } from '../../api/equipment';
 import { getCategories } from '../../api/categories';
+import { getLocations } from '../../api/locations';
 import { useAuthStore } from '../../store/useAuthStore';
 import { LogOut, Search, QrCode, ScanLine, Users, Shield, Box, ChevronLeft, ChevronRight, Filter, Warehouse } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -26,16 +27,22 @@ export const Dashboard = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [location, setLocation] = useState('');
   const [status, setStatus] = useState('');
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['equipment', page, search, category, status],
-    queryFn: () => getEquipmentList(page, search, category, status),
+    queryKey: ['equipment', page, search, category, status, location],
+    queryFn: () => getEquipmentList(page, search, category, status, location),
   });
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: getCategories,
+  });
+
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: () => getLocations(),
   });
 
 
@@ -107,6 +114,20 @@ export const Dashboard = () => {
 
             {/* Filters */}
             <div className="flex gap-2">
+                <div className="relative">
+                    <select
+                        value={location}
+                        onChange={(e) => { setLocation(e.target.value); setPage(1); }}
+                        className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded-lg leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm min-w-[120px]"
+                    >
+                        <option value="">所有倉庫</option>
+                        {locations?.map(loc => <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>)}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                        <Warehouse className="h-3 w-3" />
+                    </div>
+                </div>
+
                 <div className="relative">
                     <select
                         value={category}

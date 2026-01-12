@@ -15,6 +15,7 @@ import { EquipmentDeleteConfirmPage } from './pages/Admin/EquipmentDeleteConfirm
 import { EquipmentRemovalPage } from './pages/Admin/EquipmentRemovalPage';
 import { CategoryManagement } from './pages/Admin/CategoryManagement';
 import { LocationManagement } from './pages/Admin/Locations/LocationManagement';
+import { LocationQRCodePage } from './pages/Admin/Locations/LocationQRCodePage';
 import { LocationConfirmPage } from './pages/Admin/Locations/LocationConfirmPage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -59,6 +60,7 @@ function App() {
               <Route path="/admin/equipment/removal" element={<EquipmentRemovalPage />} />
               <Route path="/admin/categories" element={<CategoryManagement />} />
               <Route path="/admin/locations" element={<LocationManagement />} />
+              <Route path="/admin/locations/qrcode" element={<LocationQRCodePage />} />
               <Route path="/admin/locations/confirm" element={<LocationConfirmPage />} />
             </Route>
             

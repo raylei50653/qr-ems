@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentList, bulkDeleteEquipment } from '../../api/equipment';
 import { getCategories } from '../../api/categories';
+import { getLocations } from '../../api/locations';
 import type { Equipment } from '../../types';
-import { ArrowLeft, Trash2, Search, Filter, Box, AlertTriangle, CheckSquare, Square, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Trash2, Search, Filter, Box, AlertTriangle, CheckSquare, Square, ChevronLeft, ChevronRight, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const CATEGORIES_OPTIONS = [
@@ -27,6 +28,7 @@ export const EquipmentRemovalPage = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(''); // Category ID
+  const [location, setLocation] = useState('');
   const [selectedUuids, setSelectedUuids] = useState<string[]>([]);
 
   const { data: categories } = useQuery({
@@ -34,10 +36,15 @@ export const EquipmentRemovalPage = () => {
     queryFn: getCategories,
   });
 
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: () => getLocations(),
+  });
+
   // Selection persists across pages because selectedUuids is state
   const { data, isLoading } = useQuery({
-    queryKey: ['equipment', 'removal', page, search, category],
-    queryFn: () => getEquipmentList(page, search, category, ''),
+    queryKey: ['equipment', 'removal', page, search, category, location],
+    queryFn: () => getEquipmentList(page, search, category, '', location),
   });
 
   const deleteMutation = useMutation({
@@ -124,6 +131,14 @@ export const EquipmentRemovalPage = () => {
                     className="w-full pl-11 pr-4 py-3 bg-white border-2 border-gray-100 rounded-2xl focus:border-red-500 outline-none transition-colors font-bold text-sm shadow-sm"
                 />
             </div>
+            <select
+                value={location}
+                onChange={(e) => { setLocation(e.target.value); setPage(1); }}
+                className="bg-white border-2 border-gray-100 text-gray-700 py-3 px-4 rounded-2xl font-bold text-sm focus:border-red-500 outline-none shadow-sm transition-colors"
+            >
+                <option value="">所有倉庫</option>
+                {locations?.map(loc => <option key={loc.uuid} value={loc.uuid}>{loc.full_path}</option>)}
+            </select>
             <select
                 value={category}
                 onChange={(e) => { setCategory(e.target.value); setPage(1); }}
