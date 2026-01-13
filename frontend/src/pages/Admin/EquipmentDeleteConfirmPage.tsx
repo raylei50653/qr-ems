@@ -22,8 +22,10 @@ export const EquipmentDeleteConfirmPage = () => {
       alert('設備已成功刪除');
       navigate('/admin/equipment', { replace: true });
     },
-    onError: (err: any) => {
-      alert('刪除失敗：' + (err.response?.data?.detail || err.message));
+    onError: (err: Error) => {
+      // @ts-ignore
+      const detail = err.response?.data?.detail;
+      alert('刪除失敗：' + (detail || err.message));
     }
   });
 

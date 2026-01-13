@@ -4,8 +4,8 @@ import { getEquipmentList, updateEquipment, createEquipment } from '../../api/eq
 import { getLocations } from '../../api/locations';
 
 import { getCategories } from '../../api/categories';
-import type { Equipment, Category } from '../../types';
-import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Filter, Camera, Trash2, ChevronLeft, ChevronRight, Tag, Warehouse } from 'lucide-react';
+import type { Equipment } from '../../types';
+import { ArrowLeft, Box, Edit, Plus, X, Save, Search, Camera, Trash2, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { EquipmentStatusBadge } from '../../components/Equipment/EquipmentStatusBadge';
 import { LocationDisplay } from '../../components/Equipment/LocationDisplay';
@@ -76,7 +76,7 @@ export const EquipmentManagement = () => {
       setSelectedFile(null);
       alert('更新成功');
     },
-    onError: (err: any) => alert('更新失敗: ' + err.message)
+    onError: (err: Error) => alert('更新失敗: ' + err.message)
   });
 
   const createMutation = useMutation({
@@ -88,7 +88,7 @@ export const EquipmentManagement = () => {
       setSelectedFile(null);
       alert('建立成功');
     },
-    onError: (err: any) => alert('建立失敗: ' + err.message)
+    onError: (err: Error) => alert('建立失敗: ' + err.message)
   });
 
   const handleEdit = (item: Equipment) => {
@@ -346,7 +346,7 @@ export const EquipmentManagement = () => {
                             </div>
                             <div>
                                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1">狀態</label>
-                                <select className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 font-bold focus:border-primary outline-none transition-colors bg-white" value={editingItem.status || 'AVAILABLE'} onChange={e => setEditingItem({...editingItem, status: e.target.value as any})}>
+                                <select className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 font-bold focus:border-primary outline-none transition-colors bg-white" value={editingItem.status || 'AVAILABLE'} onChange={e => setEditingItem({...editingItem, status: e.target.value as Equipment['status']})}>
                                     {EDIT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                                 </select>
                             </div>
@@ -374,7 +374,7 @@ export const EquipmentManagement = () => {
                                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{cfg.label}</label>
                                         <select 
                                             className="w-full border-2 border-gray-100 rounded-lg px-2 py-2 text-xs font-bold focus:border-primary outline-none bg-white"
-                                            value={(editingItem as any)[cfg.field] || ''}
+                                            value={(editingItem as Record<string, unknown>)[cfg.field] as string || ''}
                                             onChange={e => setEditingItem({...editingItem, [cfg.field]: e.target.value})}
                                         >
                                             <option value="">無</option>
