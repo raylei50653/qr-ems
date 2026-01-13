@@ -17,6 +17,10 @@
     "frontend/src/**/*.{ts,tsx}": [
       "pnpm --prefix frontend lint",
       "bash -c 'pnpm --prefix frontend tsc -b'"
+    ],
+    "backend/**/*.py": [
+      "bash -c 'cd backend && uv run ruff check --fix'",
+      "bash -c 'cd backend && uv run ruff format'"
     ]
   },
   "devDependencies": {

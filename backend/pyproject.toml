@@ -44,3 +44,20 @@ omit = [
 [tool.coverage.report]
 show_missing = true
 skip_empty = true
+
+[tool.ruff]
+# Target version
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+# Enable Pyflakes (F) and Pycodestyle (E, W) codes by default.
+select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM", "ARG"]
+ignore = ["E501"] # Ignore line too long
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
