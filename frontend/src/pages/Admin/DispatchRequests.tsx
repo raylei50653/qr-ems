@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionsApi } from '../../api/transactions';
-import type { Transaction } from '../../api/transactions';
 import { CheckCircle, XCircle, Clock, User, Box, ArrowLeft, Shield, AlertCircle, FileText, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export const DispatchRequests = () => { 
+export const DispatchRequests = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'PENDING_APPROVAL' | 'ALL'>('PENDING_APPROVAL');
@@ -15,7 +14,7 @@ export const DispatchRequests = () => {
   const { data: transactions, isLoading } = useQuery({
     queryKey: ['transactions', 'dispatch', filter],
     queryFn: async () => {
-      const params: any = { action: 'DISPATCH' };
+      const params: Record<string, string> = { action: 'DISPATCH' };
       if (filter === 'PENDING_APPROVAL') {
         params.status = 'PENDING_APPROVAL';
       }
@@ -31,7 +30,7 @@ export const DispatchRequests = () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
     },
-    onError: (err: any) => alert('操作失敗: ' + err.message)
+    onError: (err: Error) => alert('操作失敗: ' + err.message)
   });
 
   const bulkApproveMutation = useMutation({
@@ -45,7 +44,7 @@ export const DispatchRequests = () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
     },
-    onError: (err: any) => alert('操作失敗: ' + err.message)
+    onError: (err: Error) => alert('操作失敗: ' + err.message)
   });
 
   const rejectMutation = useMutation({
@@ -55,7 +54,7 @@ export const DispatchRequests = () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
     },
-    onError: (err: any) => alert('操作失敗: ' + err.message)
+    onError: (err: Error) => alert('操作失敗: ' + err.message)
   });
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -225,7 +224,8 @@ export const DispatchRequests = () => {
                                                 </button>
                                             </div>
                                         ) : (
-                                            <span className="text-xs font-bold text-gray-300">-</span>
+                                            <span className="text-xs font-bold text-gray-300">-
+                                        </span>
                                         )}
                                     </td>
                                 </tr>

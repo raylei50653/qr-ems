@@ -34,14 +34,14 @@ jobs:
           timeout 60s sh -c 'until docker-compose exec -T db pg_isready -U postgres; do sleep 2; done'
 
       - name: Install Dev Dependencies
-        run: docker-compose exec -T backend uv sync --dev
+        run: docker-compose exec -T backend /bin/uv sync --dev
 
       - name: Run Backend Tests
         # Using -T to disable pseudo-tty allocation which is not available in CI
-        run: docker-compose exec -T backend uv run coverage run manage.py test
+        run: docker-compose exec -T backend /bin/uv run coverage run manage.py test
 
       - name: Show Coverage Report
-        run: docker-compose exec -T backend uv run coverage report
+        run: docker-compose exec -T backend /bin/uv run coverage report
 
       - name: Dump Docker Logs on Failure
         if: failure()

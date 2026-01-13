@@ -56,7 +56,7 @@ export const QRCodeScannerModal: React.FC<QRCodeScannerModalProps> = ({
                     onScanSuccess(decodedText);
                     // Don't auto stop here, let parent handle close which stops it
                 },
-                (errorMessage) => {
+                () => {
                     // ignore errors
                 }
             );

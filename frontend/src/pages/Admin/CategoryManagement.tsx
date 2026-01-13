@@ -23,7 +23,7 @@ export const CategoryManagement = () => {
       setIsModalOpen(false);
       alert('類別已建立');
     },
-    onError: (err: any) => alert('建立失敗: ' + err.message)
+    onError: (err: Error) => alert('建立失敗: ' + err.message)
   });
 
   const updateMutation = useMutation({
@@ -33,7 +33,7 @@ export const CategoryManagement = () => {
       setIsModalOpen(false);
       alert('類別已更新');
     },
-    onError: (err: any) => alert('更新失敗: ' + err.message)
+    onError: (err: Error) => alert('更新失敗: ' + err.message)
   });
 
   const deleteMutation = useMutation({
@@ -42,7 +42,7 @@ export const CategoryManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       alert('類別已刪除');
     },
-    onError: (err: any) => alert('刪除失敗: ' + err.message)
+    onError: (err: Error) => alert('刪除失敗: ' + err.message)
   });
 
   const handleEdit = (item: Category) => {

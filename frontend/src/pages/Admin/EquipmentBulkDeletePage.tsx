@@ -27,8 +27,10 @@ export const EquipmentBulkDeletePage = () => {
       alert(`已成功刪除 ${selectedUuids.length} 項設備`);
       navigate('/admin/equipment', { replace: true });
     },
-    onError: (err: any) => {
-      alert('批量刪除失敗：' + (err.response?.data?.detail || err.message));
+    onError: (err: Error) => {
+      // @ts-ignore - Temporary until we define custom error type
+      const detail = err.response?.data?.detail;
+      alert('批量刪除失敗：' + (detail || err.message));
     }
   });
 
