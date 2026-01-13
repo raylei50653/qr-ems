@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getUserList, updateUserRole } from '../../api/users';
-import type { User, UserRole } from '../../types';
-import { ArrowLeft, Users, Shield } from 'lucide-react';
+import type { UserRole } from '../../types';
+import { ArrowLeft, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const UserManagement = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [page] = useState(1);
+  const [search] = useState('');
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['users', page, search],

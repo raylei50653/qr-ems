@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getLocations } from '../../../api/locations';
 import { QRCodeSVG } from 'qrcode.react';
-import { ArrowLeft, Printer, Search, MapPin, CheckCircle, CheckSquare, Square, QrCode } from 'lucide-react';
+import { ArrowLeft, Printer, Search, MapPin, CheckCircle, QrCode } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
@@ -230,7 +230,7 @@ export const LocationQRCodePage = () => {
         @media print {
           @page { margin: 1cm; }
           body { background: white; }
-          .print\:hidden { display: none !important; }
+          .print:hidden { display: none !important; }
         }
       `}</style>
     </div>

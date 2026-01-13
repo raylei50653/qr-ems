@@ -29,7 +29,7 @@ export const ReturnRequests = () => {
   const { data: transactions, isLoading } = useQuery({
     queryKey: ['transactions', 'return', filter],
     queryFn: async () => {
-      const params: any = { action: 'RETURN' };
+      const params: Record<string, string> = { action: 'RETURN' };
       if (filter === 'PENDING_APPROVAL') {
         params.status = 'PENDING_APPROVAL';
       }
@@ -44,14 +44,14 @@ export const ReturnRequests = () => {
   });
 
   const approveMutation = useMutation({
-    mutationFn: (vars: { id: number; data?: any }) => transactionsApi.approveReturn(vars.id, vars.data),
+    mutationFn: (vars: { id: number; data?: Record<string, string | null> }) => transactionsApi.approveReturn(vars.id, vars.data),
     onSuccess: () => {
       alert('已批准歸還');
       setIsModalOpen(false);
       setAdminNote('');
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
     },
-    onError: (err: any) => alert('操作失敗: ' + err.message)
+    onError: (err: Error) => alert('操作失敗: ' + err.message)
   });
 
   const bulkApproveMutation = useMutation({
@@ -64,7 +64,7 @@ export const ReturnRequests = () => {
       setSelectedIds([]);
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
     },
-    onError: (err: any) => alert('操作失敗: ' + err.message)
+    onError: (err: Error) => alert('操作失敗: ' + err.message)
   });
 
   const rejectMutation = useMutation({
@@ -73,7 +73,7 @@ export const ReturnRequests = () => {
       alert('已拒絕歸還');
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
     },
-    onError: (err: any) => alert('操作失敗: ' + err.message)
+    onError: (err: Error) => alert('操作失敗: ' + err.message)
   });
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -338,7 +338,7 @@ export const ReturnRequests = () => {
                                         <div key={label as string}>
                                             <select 
                                                 className="w-full bg-white border-2 border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-black focus:border-primary outline-none shadow-sm transition-all"
-                                                value={val as string} onChange={e => (set as any)(e.target.value)}
+                                                value={val as string} onChange={e => (set as (v: string) => void)(e.target.value)}
                                             >
                                                 <option value="">{label as string}</option>
                                                 {(opts as string[]).map(o => <option key={o} value={o}>{o}</option>)}

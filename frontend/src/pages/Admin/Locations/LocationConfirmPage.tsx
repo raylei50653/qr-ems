@@ -41,7 +41,7 @@ export const LocationConfirmPage = () => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
     },
     onError: (err: Error) => {
-      // @ts-expect-error - Custom error response
+      // @ts-expect-error - Axios error response structure
       const detail = err.response?.data?.detail;
       setError('更新失敗：' + (detail || err.message));
     }
@@ -68,7 +68,7 @@ export const LocationConfirmPage = () => {
       setZone(equipment.zone || '');
       setCabinet(equipment.cabinet || '');
       setNumber(equipment.number || '');
-    } catch (err) {
+    } catch {
       setError('找不到該設備，請確認 UUID 是否正確。');
     }
   };

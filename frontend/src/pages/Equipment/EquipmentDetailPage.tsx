@@ -6,8 +6,8 @@ import { getLocations } from '../../api/locations';
 import { transactionsApi } from '../../api/transactions';
 import { 
     ArrowLeft, Box, Activity, User as UserIcon, 
-    History, Clock, MapPin, Move, X, Save, 
-    Camera, QrCode, AlertCircle, CheckCircle, Truck, FileText, Calendar
+    History, MapPin, Move, X, Save, 
+    Camera, QrCode, CheckCircle, Truck
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { EquipmentStatusBadge } from '../../components/Equipment/EquipmentStatusBadge';
@@ -15,6 +15,28 @@ import { LocationDisplay } from '../../components/Equipment/LocationDisplay';
 import { QRCodeSVG } from 'qrcode.react';
 import { QRCodeScannerModal } from '../../components/Scan/QRCodeScannerModal';
 import { compressImage } from '../../utils/imageCompression';
+
+const ClipboardList = ({ className }: { className?: string }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width="24" 
+    height="24" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+    <path d="M12 11h4"/>
+    <path d="M12 16h4"/>
+    <path d="M8 11h.01"/>
+    <path d="M8 16h.01"/>
+  </svg>
+);
 
 const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
 const LOCATION_CABINETS = Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']);
@@ -76,16 +98,20 @@ export const EquipmentDetailPage = () => {
   useEffect(() => {
     if (!intent || !equipment) return;
     
-    if (intent === 'borrow') setIsBorrowModalOpen(true);
-    if (intent === 'dispatch') setIsDispatchModalOpen(true);
-    if (intent === 'move') {
-        setTargetLocationId(equipment.location || '');
-        setIsMoveModalOpen(true);
-    }
+    // Wrap in timeout to avoid synchronous setState during render/effect cycle
+    const timer = setTimeout(() => {
+      if (intent === 'borrow') setIsBorrowModalOpen(true);
+      if (intent === 'dispatch') setIsDispatchModalOpen(true);
+      if (intent === 'move') {
+          setTargetLocationId(equipment.location || '');
+          setIsMoveModalOpen(true);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [intent, equipment]);
 
   const moveMutation = useMutation({
-    mutationFn: ({ uuid, data }: { uuid: string; data: Partial<any> | FormData }) => updateEquipment(uuid, data),
+    mutationFn: ({ uuid, data }: { uuid: string; data: Partial<Equipment> | FormData }) => updateEquipment(uuid, data),
     onSuccess: () => {
       alert('操作成功！');
       setIsMoveModalOpen(false);
@@ -95,8 +121,10 @@ export const EquipmentDetailPage = () => {
       queryClient.invalidateQueries({ queryKey: ['equipment', uuid] });
       queryClient.invalidateQueries({ queryKey: ['equipment-history', uuid] });
     },
-    onError: (err: any) => {
-      alert('操作失敗：' + (err.response?.data?.detail || err.message));
+    onError: (err: Error) => {
+      // @ts-expect-error - Custom axios error response
+      const detail = (err as Record<string, unknown>).response?.data?.detail;
+      alert('操作失敗：' + (detail || err.message));
     }
   });
 
@@ -111,7 +139,11 @@ export const EquipmentDetailPage = () => {
       queryClient.invalidateQueries({ queryKey: ['equipment', uuid] });
       queryClient.invalidateQueries({ queryKey: ['equipment-history', uuid] });
     },
-    onError: (err: any) => alert('借用失敗：' + (err.response?.data?.detail || err.message))
+    onError: (err: Error) => {
+      // @ts-expect-error - Custom axios error response
+      const detail = (err as Record<string, unknown>).response?.data?.detail;
+      alert('借用失敗：' + (detail || err.message));
+    }
   });
 
   const dispatchMutation = useMutation({
@@ -125,7 +157,11 @@ export const EquipmentDetailPage = () => {
       queryClient.invalidateQueries({ queryKey: ['equipment', uuid] });
       queryClient.invalidateQueries({ queryKey: ['equipment-history', uuid] });
     },
-    onError: (err: any) => alert('出庫失敗：' + (err.response?.data?.detail || err.message))
+    onError: (err: Error) => {
+      // @ts-expect-error - Custom axios error response
+      const detail = (err as Record<string, unknown>).response?.data?.detail;
+      alert('出庫失敗：' + (detail || err.message));
+    }
   });
 
   const returnMutation = useMutation({
@@ -135,8 +171,10 @@ export const EquipmentDetailPage = () => {
       queryClient.invalidateQueries({ queryKey: ['equipment', uuid] });
       queryClient.invalidateQueries({ queryKey: ['equipment-history', uuid] });
     },
-    onError: (err: any) => {
-      alert('歸還失敗：' + (err.response?.data?.detail || err.message));
+    onError: (err: Error) => {
+      // @ts-expect-error - Custom axios error response
+      const detail = (err as Record<string, unknown>).response?.data?.detail;
+      alert('歸還失敗：' + (detail || err.message));
     },
   });
 
@@ -157,7 +195,7 @@ export const EquipmentDetailPage = () => {
         try {
             const file = await compressImage(selectedFile);
             formData.append('image', file);
-        } catch (err) {
+        } catch {
             formData.append('image', selectedFile);
         }
         setIsCompressing(false);
@@ -176,7 +214,7 @@ export const EquipmentDetailPage = () => {
         try {
             const file = await compressImage(selectedFile);
             formData.append('image', file);
-        } catch (err) {
+        } catch {
             formData.append('image', selectedFile);
         }
         setIsCompressing(false);
@@ -223,7 +261,7 @@ export const EquipmentDetailPage = () => {
         try {
             const compressedFile = await compressImage(selectedFile);
             formData.append('transaction_image', compressedFile);
-        } catch (error) {
+        } catch {
             formData.append('transaction_image', selectedFile);
         }
         setIsCompressing(false);
@@ -386,8 +424,8 @@ export const EquipmentDetailPage = () => {
                 <History className="h-5 w-5 text-gray-400" /> <h3 className="text-sm font-bold text-gray-700 uppercase tracking-widest">歷史紀錄</h3>
             </div>
             <div className="divide-y divide-gray-50">
-                {history && history.length > 0 ? history.map((txn) => (
-                    <div key={txn.id} className="p-5 flex gap-4 hover:bg-gray-50/50 transition-colors">
+                {(history as Record<string, unknown>[] | undefined)?.length ? (history as Record<string, unknown>[]).map((txn) => (
+                    <div key={txn.id as number} className="p-5 flex gap-4 hover:bg-gray-50/50 transition-colors">
                         <div className="flex-shrink-0 mt-1">
                             <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${txn.action === 'BORROW' ? 'bg-blue-500' : txn.action === 'RETURN' ? 'bg-green-500' : txn.action.startsWith('MOVE') ? 'bg-orange-500' : 'bg-gray-300'}`} />
                         </div>
@@ -440,7 +478,7 @@ export const EquipmentDetailPage = () => {
                             {[['區', targetZone, setTargetZone, LOCATION_ZONES], ['櫃', targetCabinet, setTargetCabinet, LOCATION_CABINETS], ['號', targetNumber, setTargetNumber, LOCATION_NUMBERS]].map(([label, val, set, opts]) => (
                                 <div key={label as string}>
                                     <label className="block text-[10px] font-black text-gray-400 mb-1 uppercase">{label as string}</label>
-                                    <select className="w-full border-2 border-gray-100 rounded-xl px-2 py-2.5 text-sm font-bold focus:border-orange-500 outline-none bg-white transition-colors" value={val as string} onChange={e => (set as any)(e.target.value)}>
+                                    <select className="w-full border-2 border-gray-100 rounded-xl px-2 py-2.5 text-sm font-bold focus:border-orange-500 outline-none bg-white transition-colors" value={val as string} onChange={e => (set as (v: string) => void)(e.target.value)}>
                                         <option value="">選擇</option>
                                         {(opts as string[]).map(o => <option key={o} value={o}>{o}</option>)}
                                     </select>

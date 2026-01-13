@@ -67,11 +67,15 @@ export const QRCodeScannerModal: React.FC<QRCodeScannerModalProps> = ({
     }, [onScanSuccess]);
 
     useEffect(() => {
-        if (isOpen) {
-            startScanner();
-        } else {
-            stopScanner();
-        }
+        const handleScanner = async () => {
+            if (isOpen) {
+                await startScanner();
+            } else {
+                await stopScanner();
+            }
+        };
+        
+        handleScanner();
 
         return () => {
             stopScanner();

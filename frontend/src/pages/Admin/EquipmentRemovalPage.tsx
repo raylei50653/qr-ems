@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentList, bulkDeleteEquipment } from '../../api/equipment';
 import { getCategories } from '../../api/categories';
 import { getLocations } from '../../api/locations';
-import type { Equipment } from '../../types';
 import { ArrowLeft, Trash2, Search, Box, AlertTriangle, CheckSquare, Square, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 

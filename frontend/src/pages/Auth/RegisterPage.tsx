@@ -21,8 +21,9 @@ export const RegisterPage = () => {
       setAuth(data.access, data.user);
       navigate('/');
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       console.error('Registration failed:', err);
+      // @ts-expect-error - Custom axios error response
       const data = err.response?.data;
       let msg = '註冊失敗，請檢查輸入。';
       

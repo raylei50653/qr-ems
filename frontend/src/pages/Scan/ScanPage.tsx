@@ -87,7 +87,7 @@ export const ScanPage = () => {
         { facingMode: "environment" }, 
         config, 
         handleScanSuccess,
-        (errorMessage) => {
+        () => {
           // ignore parsing errors
         }
       );

@@ -49,7 +49,7 @@ export interface Equipment {
   target_cabinet?: string;
   target_number?: string;
   image?: string;
-  rdf_metadata?: Record<string, any>;
+  rdf_metadata?: Record<string, unknown>;
   current_possession?: {
     id: number;
     username: string;

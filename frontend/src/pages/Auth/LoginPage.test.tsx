@@ -27,7 +27,7 @@ describe('LoginPage', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // Setup Zustand mock
-        (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector: any) => {
+        (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector: (state: unknown) => unknown) => {
             if (selector) return selector({ setAuth: mockSetAuth });
             return { setAuth: mockSetAuth };
         });
@@ -66,7 +66,7 @@ describe('LoginPage', () => {
     it('calls login api and navigates on success', async () => {
         // Mock successful login response
         const mockResponse = { access: 'fake-token', user: { id: 1, username: 'testuser' } };
-        (authApi.login as any).mockResolvedValue(mockResponse);
+        vi.mocked(authApi.login).mockResolvedValue(mockResponse as unknown as ReturnType<typeof authApi.login>);
 
         render(
             <MemoryRouter initialEntries={['/login']}>
@@ -97,7 +97,7 @@ describe('LoginPage', () => {
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
         // Mock failed login
-        (authApi.login as any).mockRejectedValue(new Error('Invalid credentials'));
+        vi.mocked(authApi.login).mockRejectedValue(new Error('Invalid credentials'));
 
         render(
             <MemoryRouter>

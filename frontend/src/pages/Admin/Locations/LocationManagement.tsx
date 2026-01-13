@@ -52,7 +52,7 @@ export const LocationManagement = () => {
 
   // Mutations
   const locMutation = useMutation({
-    mutationFn: ({ uuid, data }: { uuid?: string; data: any }) => 
+    mutationFn: ({ uuid, data }: { uuid?: string; data: Partial<Location> }) => 
         uuid ? updateLocation(uuid, data) : createLocation(data),
     onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['locations'] });
@@ -69,7 +69,7 @@ export const LocationManagement = () => {
         alert('倉庫位置已成功刪除');
     },
     onError: (err: Error) => {
-        // @ts-expect-error
+        // @ts-expect-error - Custom error response structure from axios
         const detail = err.response?.data?.detail;
         alert('刪除失敗：' + (detail || '請確認此位置是否仍有子位置或關聯設備'));
     }
