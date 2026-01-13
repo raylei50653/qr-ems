@@ -1,0 +1,50 @@
+{
+	"name": "QR-EMS Dev Container",
+	"dockerComposeFile": [
+		"../docker-compose.yml",
+		"docker-compose.dev.yml"
+	],
+	"service": "backend",
+	"workspaceFolder": "/app",
+
+	// 安裝額外的開發工具 (Features)
+	// 讓我們在 backend 容器內也能跑 Node.js 指令，方便全端開發
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "20",
+			"pnpm": "10"
+		},
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
+		"ghcr.io/devcontainers/features/git:1": {}
+	},
+
+	// VS Code 自訂設定與擴充套件
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"dbaeumer.vscode-eslint",
+				"esbenp.prettier-vscode",
+				"bradlc.vscode-tailwindcss",
+				"tamasfe.even-better-toml",
+				"humao.rest-client"
+			],
+			"settings": {
+				"python.defaultInterpreterPath": "/app/.venv/bin/python",
+				"python.linting.enabled": true,
+				"python.formatting.provider": "none", // Let Ruff/Black handle it if configured, or default
+				"editor.formatOnSave": true
+			}
+		}
+	},
+
+	// 容器建立後執行的指令 (可選)
+	// "postCreateCommand": "uv sync && cd ../frontend && pnpm install",
+
+	// 轉發端口
+	"forwardPorts": [8000, 5173],
+
+	// 讓容器內的使用者是 root (或者 Dockerfile 指定的 app user)
+	"remoteUser": "root"
+}

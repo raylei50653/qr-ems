@@ -8,6 +8,22 @@
 *   **前端套件管理:** 必須使用 **pnpm v10+**。
 *   **後端環境管理:** 推薦使用 **uv**。
 
+## 🐳 容器化開發 (Dev Containers) - 強烈推薦
+
+本專案支援 **VS Code Dev Containers**，這能確保所有開發者擁有一致的環境，無需在本地安裝 Python 或 Node.js。
+
+### 🚀 如何開始
+1.  安裝 **Docker Desktop** 與 **VS Code**。
+2.  在 VS Code 安裝 **Dev Containers** 擴充套件 (ms-vscode-remote.remote-containers)。
+3.  打開專案，點擊左下角的綠色按鈕 (><)，選擇 **"Reopen in Container"**。
+4.  等待構建完成，你將直接進入一個已設定好的開發環境。
+
+### ⚡ 容器內指令
+*   **後端:** 直接在終端機執行 `uv run python manage.py runserver 0.0.0.0:8000`。
+*   **前端:** 進入 `/workspaces/qr-ems/frontend` (路徑視掛載而定)，執行 `pnpm dev`。
+
+---
+
 ## 🎨 前端開發規範 (Frontend)
 
 ### 1. 型別安全性 (TypeScript)

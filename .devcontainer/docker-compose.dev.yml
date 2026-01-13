@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    # 開發模式下，我們希望容器保持運行但不要自動啟動 Server (讓我們手動跑 uv run runserver)
+    # 或者我們可以讓它啟動，但這裡我們選擇 sleep 以便全權控制
+    command: sleep infinity
+    volumes:
+      - ../backend:/app:cached
+    # 確保開發工具已安裝 (在 Dockerfile 中通常已經有了，這裡只是強調)
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    # 同樣保持運行，讓我們手動執行 pnpm install / pnpm run dev
+    command: sleep infinity
+    volumes:
+      - ../frontend:/app:cached
+      # 避免 node_modules 被宿主機覆蓋或汙染，使用具名 volume
+      - frontend_node_modules:/app/node_modules
+
+  db:
+    # 資料庫服務維持原樣即可
+    restart: unless-stopped
+
+volumes:
+  frontend_node_modules:
