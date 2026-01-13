@@ -4,7 +4,7 @@ import { getEquipmentList } from '../../api/equipment';
 import { getCategories } from '../../api/categories';
 import { getLocations } from '../../api/locations';
 import { useAuthStore } from '../../store/useAuthStore';
-import { LogOut, Search, QrCode, ScanLine, Users, Shield, Box, ChevronLeft, ChevronRight, Filter, Warehouse } from 'lucide-react';
+import { LogOut, Search, QrCode, ScanLine, Users, Shield, Box, ChevronLeft, ChevronRight, Filter, Warehouse, ClipboardList, Truck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { EquipmentStatusBadge } from '../../components/Equipment/EquipmentStatusBadge';
 import { LocationDisplay } from '../../components/Equipment/LocationDisplay';
@@ -18,6 +18,7 @@ const STATUSES = [
   { value: 'TO_BE_MOVED', label: '需移動' },
   { value: 'IN_TRANSIT', label: '移動中' },
   { value: 'LOST', label: '遺失' },
+  { value: 'DISPATCHED', label: '已出庫' },
   { value: 'DISPOSED', label: '已報廢' },
 ];
 
@@ -29,6 +30,7 @@ export const Dashboard = () => {
   const [category, setCategory] = useState('');
   const [location, setLocation] = useState('');
   const [status, setStatus] = useState('');
+  const [isApprovalDropdownOpen, setIsApprovalDropdownOpen] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['equipment', page, search, category, status, location],
@@ -62,15 +64,55 @@ export const Dashboard = () => {
                     <Box className="h-5 w-5" />
                     <span className="hidden sm:inline">設備管理</span>
                 </Link>
-                <Link to="/admin/returns" className="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors" title="歸還審核">
-                    <Shield className="h-5 w-5" />
-                    <span className="hidden sm:inline">歸還審核</span>
-                </Link>
+
+                {/* Approvals Dropdown */}
+                <div className="relative">
+                    <button 
+                        onClick={() => setIsApprovalDropdownOpen(!isApprovalDropdownOpen)}
+                        className={`flex items-center space-x-1 transition-colors ${isApprovalDropdownOpen ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}
+                        title="審核管理"
+                    >
+                        <ClipboardList className="h-5 w-5" />
+                        <span className="hidden sm:inline">審核管理</span>
+                        <ChevronRight className={`h-3 w-3 transition-transform duration-200 ${isApprovalDropdownOpen ? 'rotate-90' : ''}`} />
+                    </button>
+
+                    {isApprovalDropdownOpen && (
+                        <>
+                            {/* Backdrop to close dropdown */}
+                            <div className="fixed inset-0 z-10" onClick={() => setIsApprovalDropdownOpen(false)}></div>
+                            
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                                <Link 
+                                    to="/admin/borrows" 
+                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                                    onClick={() => setIsApprovalDropdownOpen(false)}
+                                >
+                                    <ClipboardList className="h-4 w-4 mr-2" /> 借用審核
+                                </Link>
+                                <Link 
+                                    to="/admin/dispatches" 
+                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                                    onClick={() => setIsApprovalDropdownOpen(false)}
+                                >
+                                    <Truck className="h-4 w-4 mr-2" /> 出庫審核
+                                </Link>
+                                <Link 
+                                    to="/admin/returns" 
+                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                                    onClick={() => setIsApprovalDropdownOpen(false)}
+                                >
+                                    <Shield className="h-4 w-4 mr-2" /> 歸還審核
+                                </Link>
+                            </div>
+                        </>
+                    )}
+                </div>
+
                 <Link to="/admin/locations" className="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors" title="位置管理">
                     <Warehouse className="h-5 w-5" />
                     <span className="hidden sm:inline">位置管理</span>
                 </Link>
-
             </>
           )}
           {user?.role === 'ADMIN' && (
@@ -96,6 +138,48 @@ export const Dashboard = () => {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <button 
+            onClick={() => navigate('/scan?intent=move')}
+            className="flex items-center p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:border-primary hover:shadow-md transition-all group text-left"
+          >
+            <div className="p-3 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors mr-4">
+              <Truck className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800">申請移動</h3>
+              <p className="text-xs text-gray-500">掃描設備以發起移動申請</p>
+            </div>
+          </button>
+
+          <button 
+            onClick={() => navigate('/scan?intent=dispatch')}
+            className="flex items-center p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:border-orange-500 hover:shadow-md transition-all group text-left"
+          >
+            <div className="p-3 bg-orange-50 rounded-lg group-hover:bg-orange-100 transition-colors mr-4">
+              <LogOut className="h-6 w-6 text-orange-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800">申請出庫</h3>
+              <p className="text-xs text-gray-500">掃描設備以發起出庫申請</p>
+            </div>
+          </button>
+
+          <button 
+            onClick={() => navigate('/scan?intent=borrow')}
+            className="flex items-center p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:border-green-500 hover:shadow-md transition-all group text-left"
+          >
+            <div className="p-3 bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors mr-4">
+              <ClipboardList className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800">借用設備</h3>
+              <p className="text-xs text-gray-500">掃描設備以發起借用申請</p>
+            </div>
+          </button>
+        </div>
+
         <div className="bg-white p-4 rounded-xl shadow-sm mb-6 border border-gray-100 flex flex-col md:flex-row gap-4 justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800 whitespace-nowrap">設備列表</h1>
           

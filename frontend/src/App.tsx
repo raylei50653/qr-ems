@@ -6,10 +6,10 @@ import { RegisterPage } from './pages/Auth/RegisterPage';
 import { Dashboard } from './pages/Dashboard/Dashboard';
 import { EquipmentDetailPage } from './pages/Equipment/EquipmentDetailPage';
 import { ScanPage } from './pages/Scan/ScanPage';
-import { ScanRedirectPage } from './pages/Scan/ScanRedirectPage';
-import { BorrowPage } from './pages/Borrow/BorrowPage';
 import { UserManagement } from './pages/Admin/UserManagement';
 import { ReturnRequests } from './pages/Admin/ReturnRequests';
+import { BorrowRequests } from './pages/Admin/BorrowRequests';
+import { DispatchRequests } from './pages/Admin/DispatchRequests';
 import { EquipmentManagement } from './pages/Admin/EquipmentManagement';
 import { EquipmentDeleteConfirmPage } from './pages/Admin/EquipmentDeleteConfirmPage';
 import { EquipmentRemovalPage } from './pages/Admin/EquipmentRemovalPage';
@@ -46,14 +46,14 @@ function App() {
               
               {/* Equipment Routes */}
               <Route path="/equipment/:uuid" element={<EquipmentDetailPage />} />
-              <Route path="/borrow/:uuid" element={<BorrowPage />} />
               
               {/* Scan Routes */}
               <Route path="/scan" element={<ScanPage />} />
-              <Route path="/scan/:uuid" element={<ScanRedirectPage />} />
 
               {/* Admin Routes */}
               <Route path="/admin/users" element={<UserManagement />} />
+              <Route path="/admin/borrows" element={<BorrowRequests />} />
+              <Route path="/admin/dispatches" element={<DispatchRequests />} />
               <Route path="/admin/returns" element={<ReturnRequests />} />
               <Route path="/admin/equipment" element={<EquipmentManagement />} />
               <Route path="/admin/equipment/delete/:uuid" element={<EquipmentDeleteConfirmPage />} />

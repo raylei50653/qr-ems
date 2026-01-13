@@ -11,6 +11,7 @@ class Transaction(models.Model):
         MAINTENANCE_OUT = 'MAINTENANCE_OUT', _('Maintenance Out')
         MOVE_START = 'MOVE_START', _('Move Start')
         MOVE_CONFIRM = 'MOVE_CONFIRM', _('Move Confirm')
+        DISPATCH = 'DISPATCH', _('Dispatch')
 
     class Status(models.TextChoices):
         COMPLETED = 'COMPLETED', _('Completed')
@@ -56,6 +57,10 @@ class Transaction(models.Model):
     reason = models.TextField(
         blank=True,
         verbose_name=_('Reason')
+    )
+    admin_note = models.TextField(
+        blank=True,
+        verbose_name=_('Admin Note')
     )
     # Recorded location info at time of transaction
     location = models.ForeignKey(

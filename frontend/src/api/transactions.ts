@@ -13,10 +13,11 @@ export interface ReturnRequest {
 
 export interface Transaction {
   id: number;
-  action: 'BORROW' | 'RETURN' | 'MAINTENANCE_IN' | 'MAINTENANCE_OUT';
+  action: 'BORROW' | 'RETURN' | 'MAINTENANCE_IN' | 'MAINTENANCE_OUT' | 'DISPATCH';
   status: 'COMPLETED' | 'PENDING_APPROVAL' | 'REJECTED';
   due_date: string | null;
   reason: string;
+  admin_note: string;
   equipment: string; // uuid
   user: number; // user id
   image?: string;
@@ -80,6 +81,42 @@ export const transactionsApi = {
 
   rejectReturn: async (id: number, reason?: string): Promise<Transaction> => {
     const response = await client.post(`/transactions/${id}/reject-return/`, { rejection_reason: reason });
+    return response.data;
+  },
+
+  approveBorrow: async (id: number, admin_note?: string): Promise<Transaction> => {
+    const response = await client.post(`/transactions/${id}/approve-borrow/`, { admin_note });
+    return response.data;
+  },
+
+  rejectBorrow: async (id: number, reason?: string): Promise<Transaction> => {
+    const response = await client.post(`/transactions/${id}/reject-borrow/`, { rejection_reason: reason });
+    return response.data;
+  },
+
+  bulkApprove: async (transactionIds: number[], admin_note?: string): Promise<any> => {
+    const response = await client.post('/transactions/bulk-approve/', { 
+        transaction_ids: transactionIds,
+        admin_note: admin_note 
+    });
+    return response.data;
+  },
+
+  dispatch: async (data: { equipment_uuid: string; reason?: string; image?: File } | FormData): Promise<Transaction> => {
+    const isFormData = data instanceof FormData;
+    const response = await client.post('/transactions/dispatch/', data, {
+        headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    });
+    return response.data;
+  },
+
+  approveDispatch: async (id: number, admin_note?: string): Promise<Transaction> => {
+    const response = await client.post(`/transactions/${id}/approve-dispatch/`, { admin_note });
+    return response.data;
+  },
+
+  rejectDispatch: async (id: number, reason?: string): Promise<Transaction> => {
+    const response = await client.post(`/transactions/${id}/reject-dispatch/`, { rejection_reason: reason });
     return response.data;
   },
 };

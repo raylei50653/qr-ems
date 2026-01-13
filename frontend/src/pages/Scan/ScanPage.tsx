@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Search, QrCode, Camera, X, Image as ImageIcon } from 'lucide-react';
 
 export const ScanPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const intent = searchParams.get('intent');
   const [manualId, setManualId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -58,7 +60,11 @@ export const ScanPage = () => {
     const uuid = extractUuid(decodedText);
     if (uuid) {
       stopScanning();
-      navigate(`/equipment/${uuid}`);
+      if (intent) {
+        navigate(`/equipment/${uuid}?intent=${intent}`);
+      } else {
+        navigate(`/equipment/${uuid}`);
+      }
     } else {
       console.warn("Scanned text does not contain a valid UUID or location tag:", decodedText);
     }
@@ -110,7 +116,11 @@ export const ScanPage = () => {
     e.preventDefault();
     const uuid = extractUuid(manualId);
     if (uuid) {
-      navigate(`/equipment/${uuid}`);
+      if (intent) {
+        navigate(`/equipment/${uuid}?intent=${intent}`);
+      } else {
+        navigate(`/equipment/${uuid}`);
+      }
     } else {
       setError('請輸入有效的設備 ID (UUID format)');
     }

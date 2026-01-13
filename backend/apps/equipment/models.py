@@ -19,11 +19,14 @@ class Equipment(models.Model):
     class Status(models.TextChoices):
         AVAILABLE = 'AVAILABLE', 'Available'
         BORROWED = 'BORROWED', 'Borrowed'
+        PENDING_BORROW = 'PENDING_BORROW', 'Pending Borrow'
         PENDING_RETURN = 'PENDING_RETURN', 'Pending Return'
+        PENDING_DISPATCH = 'PENDING_DISPATCH', 'Pending Dispatch'
         MAINTENANCE = 'MAINTENANCE', 'Maintenance'
         TO_BE_MOVED = 'TO_BE_MOVED', 'To Be Moved'
         IN_TRANSIT = 'IN_TRANSIT', 'In Transit'
         LOST = 'LOST', 'Lost'
+        DISPATCHED = 'DISPATCHED', 'Dispatched'
         DISPOSED = 'DISPOSED', 'Disposed'
 
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, verbose_name="設備UUID")

@@ -87,3 +87,13 @@ clean:
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 	rm -rf $(FRONTEND_DIR)/dist
 	@echo "Done."
+
+gen-types:
+	@echo ">>> Generating Backend OpenAPI Schema..."
+	docker-compose up -d backend
+	docker-compose exec -T backend uv run python manage.py spectacular --file schema.yaml
+	@echo ">>> Copying schema to frontend..."
+	docker cp qr-ems-backend-1:/app/schema.yaml $(FRONTEND_DIR)/schema.yaml
+	@echo ">>> Generating Frontend TypeScript Types..."
+	cd $(FRONTEND_DIR) && pnpm gen:types
+	@echo ">>> Done! Types updated in $(FRONTEND_DIR)/src/types/api.ts"

@@ -39,12 +39,59 @@ class TransactionAPITests(TestCase):
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.equipment.refresh_from_db()
-        self.assertEqual(self.equipment.status, Equipment.Status.BORROWED)
+        self.assertEqual(self.equipment.status, Equipment.Status.PENDING_BORROW)
         
         # 確認 Transaction 紀錄
         txn = Transaction.objects.get(equipment=self.equipment, action=Transaction.Action.BORROW)
         self.assertEqual(txn.user, self.user1)
+        self.assertEqual(txn.status, Transaction.Status.PENDING_APPROVAL)
+
+    def test_approve_borrow_by_admin(self):
+        """測試管理員核准借用"""
+        # Create Pending Borrow Request
+        txn = Transaction.objects.create(
+            equipment=self.equipment, user=self.user1, 
+            action=Transaction.Action.BORROW, status=Transaction.Status.PENDING_APPROVAL
+        )
+        self.equipment.status = Equipment.Status.PENDING_BORROW
+        self.equipment.save()
+
+        self.client.force_authenticate(user=self.admin)
+        url = f'/api/v1/transactions/{txn.id}/approve-borrow/'
+        
+        response = self.client.post(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.equipment.refresh_from_db()
+        self.assertEqual(self.equipment.status, Equipment.Status.BORROWED)
+        
+        txn.refresh_from_db()
         self.assertEqual(txn.status, Transaction.Status.COMPLETED)
+        self.assertEqual(txn.admin_verifier, self.admin)
+
+    def test_reject_borrow_by_admin(self):
+        """測試管理員拒絕借用"""
+        # Create Pending Borrow Request
+        txn = Transaction.objects.create(
+            equipment=self.equipment, user=self.user1, 
+            action=Transaction.Action.BORROW, status=Transaction.Status.PENDING_APPROVAL
+        )
+        self.equipment.status = Equipment.Status.PENDING_BORROW
+        self.equipment.save()
+
+        self.client.force_authenticate(user=self.admin)
+        url = f'/api/v1/transactions/{txn.id}/reject-borrow/'
+        data = {'rejection_reason': 'Not allowed'}
+        
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.equipment.refresh_from_db()
+        self.assertEqual(self.equipment.status, Equipment.Status.AVAILABLE)
+        
+        txn.refresh_from_db()
+        self.assertEqual(txn.status, Transaction.Status.REJECTED)
+        self.assertEqual(txn.reason, 'Not allowed')
 
     def test_borrow_unavailable_equipment(self):
         """測試借用非可用狀態的設備"""

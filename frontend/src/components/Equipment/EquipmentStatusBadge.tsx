@@ -8,6 +8,7 @@ const STATUS_MAP: Record<string, string> = {
     TO_BE_MOVED: '需移動',
     IN_TRANSIT: '移動中',
     LOST: '遺失',
+    DISPATCHED: '已出庫',
     DISPOSED: '已報廢',
 };
 
@@ -19,6 +20,7 @@ const STATUS_STYLES: Record<string, string> = {
     TO_BE_MOVED: 'bg-orange-100 text-orange-800',
     IN_TRANSIT: 'bg-amber-100 text-amber-800',
     LOST: 'bg-gray-200 text-gray-800',
+    DISPATCHED: 'bg-orange-100 text-orange-800',
     DISPOSED: 'bg-gray-100 text-gray-500',
 };
 
