@@ -21,19 +21,19 @@ export const QRCodeScannerModal: React.FC<QRCodeScannerModalProps> = ({
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const regionId = 'reader-modal-region';
 
-    useEffect(() => {
-        if (isOpen) {
-            startScanner();
-        } else {
-            stopScanner();
+    const stopScanner = React.useCallback(async () => {
+        if (scannerRef.current && scannerRef.current.isScanning) {
+            try {
+                await scannerRef.current.stop();
+                await scannerRef.current.clear();
+                scannerRef.current = null;
+            } catch (err) {
+                console.warn("Error stopping scanner:", err);
+            }
         }
+    }, []);
 
-        return () => {
-            stopScanner();
-        };
-    }, [isOpen]);
-
-    const startScanner = async () => {
+    const startScanner = React.useCallback(async () => {
         setError(null);
         try {
             // Give the DOM a moment to render the div
@@ -64,19 +64,19 @@ export const QRCodeScannerModal: React.FC<QRCodeScannerModalProps> = ({
             console.error("Error starting scanner:", err);
             setError("無法啟動相機，請確認權限設定。");
         }
-    };
+    }, [onScanSuccess]);
 
-    const stopScanner = async () => {
-        if (scannerRef.current && scannerRef.current.isScanning) {
-            try {
-                await scannerRef.current.stop();
-                await scannerRef.current.clear();
-                scannerRef.current = null;
-            } catch (err) {
-                console.warn("Error stopping scanner:", err);
-            }
+    useEffect(() => {
+        if (isOpen) {
+            startScanner();
+        } else {
+            stopScanner();
         }
-    };
+
+        return () => {
+            stopScanner();
+        };
+    }, [isOpen, startScanner, stopScanner]);
 
     if (!isOpen) return null;
 

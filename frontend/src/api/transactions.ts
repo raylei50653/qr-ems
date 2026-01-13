@@ -48,7 +48,7 @@ export interface Transaction {
 }
 
 export const transactionsApi = {
-  getTransactions: async (params?: any): Promise<Transaction[]> => {
+  getTransactions: async (params?: Record<string, unknown>): Promise<Transaction[]> => {
     // Note: If backend implements pagination, this might return { results: [...] }
     // For now assuming list or checking response structure.
     // Standard DRF ModelViewSet returns array if not paginated or { count, next, previous, results } if paginated.
@@ -74,7 +74,7 @@ export const transactionsApi = {
     return response.data;
   },
 
-  approveReturn: async (id: number, data?: any): Promise<Transaction> => {
+  approveReturn: async (id: number, data?: Record<string, unknown>): Promise<Transaction> => {
     const response = await client.post(`/transactions/${id}/approve-return/`, data);
     return response.data;
   },
@@ -94,7 +94,7 @@ export const transactionsApi = {
     return response.data;
   },
 
-  bulkApprove: async (transactionIds: number[], admin_note?: string): Promise<any> => {
+  bulkApprove: async (transactionIds: number[], admin_note?: string): Promise<{ success: number[]; failed: { id: number; error: string }[] }> => {
     const response = await client.post('/transactions/bulk-approve/', { 
         transaction_ids: transactionIds,
         admin_note: admin_note 

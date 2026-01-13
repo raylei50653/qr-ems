@@ -2,7 +2,7 @@ import client from './client';
 import type { Location } from '../types';
 
 export const getLocations = async (parent?: string | null) => {
-  const params: any = {};
+  const params: Record<string, string> = {};
   if (parent !== undefined) {
     params.parent = parent === null ? 'null' : parent;
   }

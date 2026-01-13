@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Location } from '../../types';
-import { ChevronRight, ChevronDown, Folder, FolderOpen, MapPin, Plus, Edit, Trash2, QrCode } from 'lucide-react';
+import { ChevronDown, Folder, MapPin, Plus, Edit, Trash2, QrCode } from 'lucide-react';
 
 interface LocationTreeItemProps {
     location: Location;

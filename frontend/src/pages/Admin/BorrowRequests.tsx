@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionsApi } from '../../api/transactions';
-import type { Transaction } from '../../api/transactions';
 import { CheckCircle, XCircle, Clock, User, Box, ArrowLeft, Shield, AlertCircle, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,10 +14,11 @@ export const BorrowRequests = () => {
   const { data: transactions, isLoading } = useQuery({
     queryKey: ['transactions', 'borrow', filter],
     queryFn: async () => {
-      const params: any = { action: 'BORROW' };
+      const params: Record<string, string> = { action: 'BORROW' };
       if (filter === 'PENDING_APPROVAL') {
         params.status = 'PENDING_APPROVAL';
       }
+      // Assuming getTransactions returns Transaction[]
       return await transactionsApi.getTransactions(params);
     },
   });
@@ -30,7 +30,7 @@ export const BorrowRequests = () => {
       alert('已批准借用');
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
     },
-    onError: (err: any) => alert('操作失敗: ' + err.message)
+    onError: (err: Error) => alert('操作失敗: ' + err.message)
   });
 
   const bulkApproveMutation = useMutation({
@@ -43,7 +43,7 @@ export const BorrowRequests = () => {
       setSelectedIds([]);
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
     },
-    onError: (err: any) => alert('操作失敗: ' + err.message)
+    onError: (err: Error) => alert('操作失敗: ' + err.message)
   });
 
   const rejectMutation = useMutation({
@@ -52,7 +52,7 @@ export const BorrowRequests = () => {
       alert('已拒絕借用');
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
     },
-    onError: (err: any) => alert('操作失敗: ' + err.message)
+    onError: (err: Error) => alert('操作失敗: ' + err.message)
   });
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
