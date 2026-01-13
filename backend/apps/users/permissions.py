@@ -8,7 +8,7 @@ class IsManagerOrAdmin(permissions.BasePermission):
     Allows access only to users with MANAGER or ADMIN roles, or superusers.
     """
 
-    def has_permission(self, request, _view):
+    def has_permission(self, request, view):  # noqa: ARG002
         if not request.user or not request.user.is_authenticated:
             return False
 
@@ -24,7 +24,7 @@ class IsAdminUser(permissions.BasePermission):
     Allows access only to users with ADMIN role or superusers.
     """
 
-    def has_permission(self, request, _view):
+    def has_permission(self, request, view):  # noqa: ARG002
         if not request.user or not request.user.is_authenticated:
             return False
 

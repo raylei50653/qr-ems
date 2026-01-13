@@ -17,7 +17,7 @@ from .services import update_equipment_with_transaction
 
 
 class IsManagerOrReadOnly(permissions.BasePermission):
-    def has_permission(self, request, _view):
+    def has_permission(self, request, view):  # noqa: ARG002
         if request.method in permissions.SAFE_METHODS:
             return True
         return request.user.is_authenticated and (
@@ -98,14 +98,14 @@ class EquipmentViewSet(viewsets.ModelViewSet):
         return queryset
 
     @action(detail=True, methods=['get'])
-    def history(self, _request, _uuid=None):
+    def history(self, request, uuid=None):  # noqa: ARG002
         equipment = self.get_object()
         transactions = equipment.transactions.all().order_by('-created_at')
         serializer = TransactionSerializer(transactions, many=True)
         return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
-    def qr(self, _request, _uuid=None):
+    def qr(self, request, uuid=None):  # noqa: ARG002
         equipment = self.get_object()
         # Data to encode: URL to frontend scan page
         frontend_url = config('FRONTEND_URL', default='http://localhost:5173')
