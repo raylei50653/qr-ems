@@ -4,7 +4,7 @@
 
 ## 🛠️ 技術棧 (Tech Stack)
 
-*   **Framework:** React 18+
+*   **Framework:** React 19
 *   **Build Tool:** Vite
 *   **Language:** TypeScript
 *   **Package Manager:** pnpm (v10+) - **Required**
@@ -68,7 +68,7 @@ pnpm test  # 執行單元測試
 
 | 變數名 | 說明 | 範例 |
 | :--- | :--- | :--- |
-| `VITE_API_BASE_URL` | 後端 API 基礎路徑 | `http://localhost:8000/api/v1` (或 `https://你的網域/api/v1`) |
+| `VITE_API_BASE_URL` | 後端 API 基礎路徑 | `http://localhost:8000/api/v1` (本機)<br>`https://<tunnel-url>/api/v1` (遠端) |
 | `VITE_GOOGLE_CLIENT_ID` | Google OAuth Client ID | `your-client-id.apps.googleusercontent.com` |
 
 ## 🔑 主要功能模組

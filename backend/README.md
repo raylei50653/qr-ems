@@ -13,22 +13,12 @@
 
 ## 📂 應用結構 (Apps)
 
-*   **`users`**: 使用者認證與管理。
-    *   支援 Google 登入 (`/api/v1/auth/google/`)。
-    *   支援傳統帳號註冊 (`/api/v1/auth/register/`)。
-    *   角色權限 (Admin, Manager, User)。
-*   **`equipment`**: 設備管理核心。
-    *   設備 CRUD (`/api/v1/equipment/`)。
-    *   QR Code 生成 (`/api/v1/equipment/{uuid}/qr/`)。
-    *   歷史紀錄 (`/api/v1/equipment/{uuid}/history/`)。
-    *   分類與狀態篩選。
-    *   **架構**: 使用 Service Layer (`services.py`) 處理狀態變更與 Transaction 紀錄。
-*   **`transactions`**: 借還流程邏輯。
-    *   借用 (`borrow`)、歸還申請 (`return-request`)。
-    *   管理員審核 (`approve-return`, `reject-return`)。
-*   **`locations`**: 倉庫位置管理。
-    *   支援層級結構（父子位置）。
-    *   提供位置資訊與路徑 API。
+| App 名稱 | URL 前綴 | 核心功能 | 備註 |
+| :--- | :--- | :--- | :--- |
+| **`users`** | `/api/v1/auth/` | 使用者認證 (Google/傳統註冊)、角色權限管理 (RBAC) | 區分 Admin, Manager, User |
+| **`equipment`** | `/api/v1/equipment/` | 設備 CRUD、QR Code 生成、歷史紀錄查詢 | 採用 Service Layer 架構處理狀態 |
+| **`transactions`** | `/api/v1/transactions/` | 借用/歸還申請、管理員審核流程 | 包含 `borrow`, `return-request` 等操作 |
+| **`locations`** | `/api/v1/locations/` | 倉庫位置管理、層級結構樹狀圖 | 支援父子位置路徑查詢 |
 
 ## 🚀 開發指令 (Development)
 

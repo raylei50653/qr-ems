@@ -18,7 +18,8 @@ export const RegisterPage = () => {
   const registerMutation = useMutation({
     mutationFn: register,
     onSuccess: (data) => {
-      setAuth(data.access, data.user);
+              setAuth(data.access, data.refresh, data.user);
+      
       navigate('/');
     },
     onError: (err: Error) => {

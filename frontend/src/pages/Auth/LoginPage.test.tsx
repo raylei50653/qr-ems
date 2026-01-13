@@ -65,7 +65,7 @@ describe('LoginPage', () => {
 
     it('calls login api and navigates on success', async () => {
         // Mock successful login response
-        const mockResponse = { access: 'fake-token', user: { id: 1, username: 'testuser' } };
+        const mockResponse = { access: 'fake-token', refresh: 'fake-refresh', user: { id: 1, username: 'testuser' } };
         vi.mocked(authApi.login).mockResolvedValue(mockResponse as unknown as Awaited<ReturnType<typeof authApi.login>>);
 
         render(
@@ -88,7 +88,7 @@ describe('LoginPage', () => {
             expect(authApi.login).toHaveBeenCalledWith('testuser', 'password123');
         });
 
-        expect(mockSetAuth).toHaveBeenCalledWith('fake-token', mockResponse.user);
+        expect(mockSetAuth).toHaveBeenCalledWith('fake-token', 'fake-refresh', mockResponse.user);
         expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
     });
 

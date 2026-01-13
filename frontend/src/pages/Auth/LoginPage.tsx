@@ -24,7 +24,7 @@ export const LoginPage = () => {
 
     try {
       const data = await login(username, password);
-      setAuth(data.access, data.user);
+        setAuth(data.access, data.refresh, data.user);
       navigate(from, { replace: true });
     } catch (err: unknown) {
       setError('Login failed. Please check your credentials.');
@@ -45,7 +45,7 @@ export const LoginPage = () => {
     
     try {
       const data = await googleLogin(credentialResponse.credential);
-      setAuth(data.access, data.user);
+        setAuth(data.access, data.refresh, data.user);
       navigate(from, { replace: true });
     } catch (err: unknown) {
       console.error(err);
