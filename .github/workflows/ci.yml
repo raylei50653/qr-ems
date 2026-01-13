@@ -26,34 +26,34 @@ jobs:
           
           # Start necessary services (db and backend)
           # We don't need frontend or tunnel for backend tests
-          docker-compose up -d db backend
+          docker compose up -d db backend
 
       - name: Wait for DB to be healthy
         run: |
           # Simple wait loop for postgres
-          timeout 60s sh -c 'until docker-compose exec -T db pg_isready -U postgres; do sleep 2; done'
+          timeout 60s sh -c 'until docker compose exec -T db pg_isready -U postgres; do sleep 2; done'
 
       - name: Install Test Dependencies
         run: |
           # Ensure uv is available (fallback to pip install if binary missing/broken in CI)
-          docker-compose exec -T backend sh -c "command -v uv >/dev/null 2>&1 || pip install uv"
+          docker compose exec -T backend sh -c "command -v uv >/dev/null 2>&1 || pip install uv"
           # Install dev dependencies
-          docker-compose exec -T backend uv sync --dev
+          docker compose exec -T backend uv sync --dev
 
       - name: Run Backend Tests
         # Using -T to disable pseudo-tty allocation which is not available in CI
-        run: docker-compose exec -T backend uv run coverage run manage.py test
+        run: docker compose exec -T backend uv run coverage run manage.py test
 
       - name: Show Coverage Report
-        run: docker-compose exec -T backend uv run coverage report
+        run: docker compose exec -T backend uv run coverage report
 
       - name: Dump Docker Logs on Failure
         if: failure()
-        run: docker-compose logs
+        run: docker compose logs
 
       - name: Stop Services
         if: always()
-        run: docker-compose down
+        run: docker compose down
 
   frontend:
     name: Frontend (Node.js)
@@ -68,7 +68,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

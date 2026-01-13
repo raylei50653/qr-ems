@@ -22,7 +22,7 @@ class IsManagerOrReadOnly(permissions.BasePermission):
         )
 
 class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.all()
+    queryset = Category.objects.all().order_by('id')
     serializer_class = CategorySerializer
     permission_classes = [IsManagerOrReadOnly]
     filter_backends = [filters.SearchFilter]

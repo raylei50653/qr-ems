@@ -5,7 +5,7 @@ import { getCategories } from '../../api/categories';
 import { getLocations } from '../../api/locations';
 import type { Equipment } from '../../types';
 import { ArrowLeft, Trash2, Search, Box, AlertTriangle, CheckSquare, Square, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNavigate } => 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const statusMap: Record<string, string> = {
     AVAILABLE: '可借用',

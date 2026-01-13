@@ -41,7 +41,7 @@ export const LocationConfirmPage = () => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
     },
     onError: (err: Error) => {
-      // @ts-ignore
+      // @ts-expect-error - Custom error response
       const detail = err.response?.data?.detail;
       setError('更新失敗：' + (detail || err.message));
     }

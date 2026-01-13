@@ -4,7 +4,7 @@ import { getLocations, createLocation, updateLocation, deleteLocation } from '..
 import { getEquipmentList, updateEquipment } from '../../../api/equipment';
 import { getCategories } from '../../../api/categories';
 import type { Equipment, Location } from '../../../types';
-import { ArrowLeft, Warehouse, MapPin, Plus, Edit, Trash2, X, Save, Search, ChevronRight, ChevronDown, QrCode } from 'lucide-react';import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Warehouse, Plus, Edit, Trash2, X, Save, Search, ChevronRight, QrCode, ExternalLink } from 'lucide-react';import { useNavigate } from 'react-router-dom';
 import { EquipmentStatusBadge } from '../../../components/Equipment/EquipmentStatusBadge';
 import { LocationDisplay } from '../../../components/Equipment/LocationDisplay';
 import { QRCodeSVG } from 'qrcode.react';
@@ -68,8 +68,10 @@ export const LocationManagement = () => {
         setInvLocation(''); // Reset selected location after delete
         alert('倉庫位置已成功刪除');
     },
-    onError: (err: any) => {
-        alert('刪除失敗：' + (err.response?.data?.detail || '請確認此位置是否仍有子位置或關聯設備'));
+    onError: (err: Error) => {
+        // @ts-expect-error
+        const detail = err.response?.data?.detail;
+        alert('刪除失敗：' + (detail || '請確認此位置是否仍有子位置或關聯設備'));
     }
   });
 
@@ -82,7 +84,7 @@ export const LocationManagement = () => {
   };
 
   const equipmentMutation = useMutation({
-    mutationFn: ({ uuid, data }: { uuid: string; data: any }) => updateEquipment(uuid, data),
+    mutationFn: ({ uuid, data }: { uuid: string; data: Partial<Equipment> }) => updateEquipment(uuid, data),
     onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['equipment-inventory'] });
         setMovingItem(null);
@@ -104,7 +106,7 @@ export const LocationManagement = () => {
 
   const handleMoveAction = (isTarget: boolean) => {
       if (!movingItem) return;
-      const payload: any = isTarget ? {
+      const payload: Partial<Equipment> = isTarget ? {
           target_location: moveData.location || null,
           target_zone: moveData.zone,
           target_cabinet: moveData.cabinet,
@@ -349,7 +351,7 @@ export const LocationManagement = () => {
                                     <div key={field}>
                                         <select 
                                             className={`w-full bg-white border-2 border-gray-200 rounded-2xl px-3 py-2.5 text-xs font-black focus:border-primary outline-none shadow-sm transition-all ${isTargetMode ? 'focus:border-orange-500' : 'focus:border-green-600'}`}
-                                            value={(moveData as any)[field]}
+                                            value={(moveData as Record<string, string>)[field]}
                                             onChange={e => setMoveData({...moveData, [field]: e.target.value})}
                                         >
                                             <option value="">{label}</option>

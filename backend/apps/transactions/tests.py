@@ -91,7 +91,7 @@ class TransactionAPITests(TestCase):
         
         txn.refresh_from_db()
         self.assertEqual(txn.status, Transaction.Status.REJECTED)
-        self.assertEqual(txn.reason, 'Not allowed')
+        self.assertEqual(txn.admin_note, 'Not allowed')
 
     def test_borrow_unavailable_equipment(self):
         """測試借用非可用狀態的設備"""

@@ -23,7 +23,7 @@ export const EquipmentDeleteConfirmPage = () => {
       navigate('/admin/equipment', { replace: true });
     },
     onError: (err: Error) => {
-      // @ts-expect-error
+      // @ts-expect-error - Response property might not exist on Error type
       const detail = err.response?.data?.detail;
       alert('刪除失敗：' + (detail || err.message));
     }
