@@ -4,12 +4,7 @@ import { getLocations, createLocation, updateLocation, deleteLocation } from '..
 import { getEquipmentList, updateEquipment } from '../../../api/equipment';
 import { getCategories } from '../../../api/categories';
 import type { Equipment, Location } from '../../../types';
-import { 
-    Box, Search, X, ArrowLeft, Warehouse, 
-    ArrowRightLeft, ChevronLeft, ChevronRight, 
-    MapPin, Edit, Save, ExternalLink, QrCode, Plus, Trash2
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Warehouse, MapPin, Plus, Edit, Trash2, X, Save, Search, ChevronRight, ChevronDown, QrCode } from 'lucide-react';import { useNavigate } from 'react-router-dom';
 import { EquipmentStatusBadge } from '../../../components/Equipment/EquipmentStatusBadge';
 import { LocationDisplay } from '../../../components/Equipment/LocationDisplay';
 import { QRCodeSVG } from 'qrcode.react';

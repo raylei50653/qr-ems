@@ -28,7 +28,7 @@ export const EquipmentBulkDeletePage = () => {
       navigate('/admin/equipment', { replace: true });
     },
     onError: (err: Error) => {
-      // @ts-ignore - Temporary until we define custom error type
+      // @ts-expect-error - Temporary until we define custom error type
       const detail = err.response?.data?.detail;
       alert('批量刪除失敗：' + (detail || err.message));
     }

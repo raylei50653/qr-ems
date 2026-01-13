@@ -33,25 +33,19 @@ jobs:
           # Simple wait loop for postgres
           timeout 60s sh -c 'until docker-compose exec -T db pg_isready -U postgres; do sleep 2; done'
 
-      - name: Debug Container State
+      - name: Install Test Dependencies
         run: |
-          docker-compose ps
-          docker-compose logs backend
-          # Check if we can execute ANY command
-          docker-compose exec -T backend echo "Backend container is responding"
-          # Check for uv binary
-          docker-compose exec -T backend ls -l /bin/uv || echo "uv not found at /bin/uv"
-          docker-compose exec -T backend which uv || echo "uv not found in PATH"
-
-      - name: Install Dev Dependencies
-        run: docker-compose exec -T backend /bin/uv sync --dev
+          # Ensure uv is available (fallback to pip install if binary missing/broken in CI)
+          docker-compose exec -T backend sh -c "command -v uv >/dev/null 2>&1 || pip install uv"
+          # Install dev dependencies
+          docker-compose exec -T backend uv sync --dev
 
       - name: Run Backend Tests
         # Using -T to disable pseudo-tty allocation which is not available in CI
-        run: docker-compose exec -T backend /bin/uv run coverage run manage.py test
+        run: docker-compose exec -T backend uv run coverage run manage.py test
 
       - name: Show Coverage Report
-        run: docker-compose exec -T backend /bin/uv run coverage report
+        run: docker-compose exec -T backend uv run coverage report
 
       - name: Dump Docker Logs on Failure
         if: failure()

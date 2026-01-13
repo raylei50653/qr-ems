@@ -23,7 +23,7 @@ export const EquipmentDeleteConfirmPage = () => {
       navigate('/admin/equipment', { replace: true });
     },
     onError: (err: Error) => {
-      // @ts-ignore
+      // @ts-expect-error
       const detail = err.response?.data?.detail;
       alert('刪除失敗：' + (detail || err.message));
     }

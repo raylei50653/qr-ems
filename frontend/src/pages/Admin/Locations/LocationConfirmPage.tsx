@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getLocationDetail } from '../../../api/locations';
 import { getEquipmentDetail, updateEquipment } from '../../../api/equipment';
 import type { Equipment } from '../../../types';
-import { ArrowLeft, MapPin, Box, CheckCircle, QrCode } from 'lucide-react';
+import { ArrowLeft, MapPin, Box, CheckCircle } from 'lucide-react';
 
 const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
 const LOCATION_CABINETS = Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']);
@@ -34,14 +34,16 @@ export const LocationConfirmPage = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ uuid, data }: { uuid: string; data: Partial<any> }) => updateEquipment(uuid, data),
+    mutationFn: ({ uuid, data }: { uuid: string; data: Partial<Equipment> }) => updateEquipment(uuid, data),
     onSuccess: () => {
       alert('設備位置已更新！');
       navigate('/');
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
     },
-    onError: (err: any) => {
-      setError('更新失敗：' + (err.response?.data?.detail || err.message));
+    onError: (err: Error) => {
+      // @ts-ignore
+      const detail = err.response?.data?.detail;
+      setError('更新失敗：' + (detail || err.message));
     }
   });
 

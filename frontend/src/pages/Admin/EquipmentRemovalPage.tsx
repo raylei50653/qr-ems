@@ -3,12 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentList, bulkDeleteEquipment } from '../../api/equipment';
 import { getCategories } from '../../api/categories';
 import { getLocations } from '../../api/locations';
-import { ArrowLeft, Trash2, Search, Filter, Box, AlertTriangle, CheckSquare, Square, ChevronLeft, ChevronRight, Warehouse } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-
-const CATEGORIES_OPTIONS = [
-  { value: '', label: '所有類別' },
-];
+import type { Equipment } from '../../types';
+import { ArrowLeft, Trash2, Search, Box, AlertTriangle, CheckSquare, Square, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } => 'react-router-dom';
 
 const statusMap: Record<string, string> = {
     AVAILABLE: '可借用',
@@ -54,7 +51,7 @@ export const EquipmentRemovalPage = () => {
       setSelectedUuids([]);
       navigate('/admin/equipment');
     },
-    onError: (err: any) => alert('刪除失敗: ' + err.message)
+    onError: (err: Error) => alert('刪除失敗: ' + err.message)
   });
 
   const toggleSelectAll = () => {
