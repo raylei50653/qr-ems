@@ -33,6 +33,16 @@ jobs:
           # Simple wait loop for postgres
           timeout 60s sh -c 'until docker-compose exec -T db pg_isready -U postgres; do sleep 2; done'
 
+      - name: Debug Container State
+        run: |
+          docker-compose ps
+          docker-compose logs backend
+          # Check if we can execute ANY command
+          docker-compose exec -T backend echo "Backend container is responding"
+          # Check for uv binary
+          docker-compose exec -T backend ls -l /bin/uv || echo "uv not found at /bin/uv"
+          docker-compose exec -T backend which uv || echo "uv not found in PATH"
+
       - name: Install Dev Dependencies
         run: docker-compose exec -T backend /bin/uv sync --dev
 
