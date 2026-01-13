@@ -1,0 +1,26 @@
+{
+  "name": "qr-ems",
+  "version": "1.0.0",
+  "description": "**QR-EMS** 是一套現代化的設備資產管理解決方案，專為解決實驗室、辦公室或共享空間中設備追蹤不易、借還流程繁瑣的問題而設計。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "lint-staged": {
+    "frontend/src/**/*.{ts,tsx}": [
+      "pnpm --prefix frontend lint",
+      "bash -c 'pnpm --prefix frontend tsc -b'"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7"
+  }
+}
