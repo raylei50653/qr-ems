@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEquipmentDetail, getEquipmentHistory, updateEquipment } from '../../api/equipment';
 import { getLocations } from '../../api/locations';
 import { transactionsApi } from '../../api/transactions';
+import type { Equipment, Transaction } from '../../types';
 import { 
     ArrowLeft, Box, Activity, User as UserIcon, 
     History, MapPin, Move, X, Save, 
@@ -424,8 +425,8 @@ export const EquipmentDetailPage = () => {
                 <History className="h-5 w-5 text-gray-400" /> <h3 className="text-sm font-bold text-gray-700 uppercase tracking-widest">歷史紀錄</h3>
             </div>
             <div className="divide-y divide-gray-50">
-                {(history as Record<string, unknown>[] | undefined)?.length ? (history as Record<string, unknown>[]).map((txn) => (
-                    <div key={txn.id as number} className="p-5 flex gap-4 hover:bg-gray-50/50 transition-colors">
+                {(history as Transaction[] | undefined)?.length ? (history as Transaction[]).map((txn) => (
+                    <div key={txn.id} className="p-5 flex gap-4 hover:bg-gray-50/50 transition-colors">
                         <div className="flex-shrink-0 mt-1">
                             <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${txn.action === 'BORROW' ? 'bg-blue-500' : txn.action === 'RETURN' ? 'bg-green-500' : txn.action.startsWith('MOVE') ? 'bg-orange-500' : 'bg-gray-300'}`} />
                         </div>

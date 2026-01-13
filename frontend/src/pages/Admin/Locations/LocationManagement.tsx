@@ -107,17 +107,17 @@ export const LocationManagement = () => {
   const handleMoveAction = (isTarget: boolean) => {
       if (!movingItem) return;
       const payload: Partial<Equipment> = isTarget ? {
-          target_location: moveData.location || null,
+          target_location: moveData.location || undefined,
           target_zone: moveData.zone,
           target_cabinet: moveData.cabinet,
           target_number: moveData.number,
           status: 'TO_BE_MOVED'
       } : {
-          location: moveData.location || null,
+          location: moveData.location || undefined,
           zone: moveData.zone,
           cabinet: moveData.cabinet,
           number: moveData.number,
-          target_location: null,
+          target_location: undefined,
           target_zone: '',
           target_cabinet: '',
           target_number: '',
@@ -412,7 +412,7 @@ export const LocationManagement = () => {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
               <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden p-8 animate-in slide-in-from-bottom-4 duration-200">
                   <h3 className="text-xl font-black text-gray-800 mb-6">{editingLoc?.uuid ? '編輯儲存位置' : '新增儲存位置'}</h3>
-                  <form onSubmit={(e) => { e.preventDefault(); locMutation.mutate({ uuid: editingLoc?.uuid, data: editingLoc }); }} className="space-y-5">
+                  <form onSubmit={(e) => { e.preventDefault(); locMutation.mutate({ uuid: editingLoc?.uuid, data: editingLoc as Partial<Location> }); }} className="space-y-5">
                       <div>
                           <label className="block text-xs font-black text-gray-600 uppercase tracking-widest mb-2">位置名稱 (如: A棟-1F)</label>
                           <input 
