@@ -38,9 +38,9 @@ export interface Equipment {
   status: EquipmentStatus;
   category?: number; // Store ID
   category_details?: Category;
-  location?: string;
+  location?: string | null;
   location_details?: Location;
-  target_location?: string;
+  target_location?: string | null;
   target_location_details?: Location;
   zone?: string;
   cabinet?: string;

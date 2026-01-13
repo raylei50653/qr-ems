@@ -4,7 +4,8 @@ import { getLocations, createLocation, updateLocation, deleteLocation } from '..
 import { getEquipmentList, updateEquipment } from '../../../api/equipment';
 import { getCategories } from '../../../api/categories';
 import type { Equipment, Location } from '../../../types';
-import { ArrowLeft, Warehouse, Plus, Edit, Trash2, X, Save, Search, ChevronRight, QrCode, ExternalLink } from 'lucide-react';import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Warehouse, Plus, Edit, Trash2, X, Save, Search, ChevronRight, ChevronLeft, QrCode, ExternalLink, Box } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { EquipmentStatusBadge } from '../../../components/Equipment/EquipmentStatusBadge';
 import { LocationDisplay } from '../../../components/Equipment/LocationDisplay';
 import { QRCodeSVG } from 'qrcode.react';
@@ -107,17 +108,17 @@ export const LocationManagement = () => {
   const handleMoveAction = (isTarget: boolean) => {
       if (!movingItem) return;
       const payload: Partial<Equipment> = isTarget ? {
-          target_location: moveData.location || undefined,
+          target_location: moveData.location || null,
           target_zone: moveData.zone,
           target_cabinet: moveData.cabinet,
           target_number: moveData.number,
           status: 'TO_BE_MOVED'
       } : {
-          location: moveData.location || undefined,
+          location: moveData.location || null,
           zone: moveData.zone,
           cabinet: moveData.cabinet,
           number: moveData.number,
-          target_location: undefined,
+          target_location: null,
           target_zone: '',
           target_cabinet: '',
           target_number: '',

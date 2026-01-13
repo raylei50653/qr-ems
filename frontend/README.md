@@ -7,11 +7,13 @@
 *   **Framework:** React 18+
 *   **Build Tool:** Vite
 *   **Language:** TypeScript
+*   **Package Manager:** pnpm (v10+) - **Required**
 *   **Styling:** Tailwind CSS
 *   **State Management:** Zustand (Auth/Global), TanStack Query (Server State)
 *   **Routing:** React Router v6
 *   **QR Code:** `html5-qrcode`
 *   **HTTP Client:** Axios
+*   **Icons:** `lucide-react`
 
 ## 📂 專案結構 (Structure)
 
@@ -36,6 +38,7 @@ src/
 
 ### 1. 安裝依賴
 ```bash
+# 必須使用 pnpm v10+
 pnpm install
 ```
 
@@ -48,6 +51,17 @@ pnpm run dev
 ### 3. 建置生產版本
 ```bash
 pnpm run build
+```
+
+### 4. 程式碼規範 (Linting & Testing)
+本專案啟用嚴格的 ESLint 與 TypeScript 檢查：
+*   **No Explicit Any:** 禁止使用 `any`，請使用 `unknown` 或具體型別。
+*   **Effect Dependencies:** `useEffect` 內禁止同步執行 `setState`，請使用 `setTimeout` 轉為異步或重構邏輯。
+*   **Icons:** 圖示請統一從 `lucide-react` 引入，避免使用未定義的圖示。
+
+```bash
+pnpm lint  # 檢查語法
+pnpm test  # 執行單元測試
 ```
 
 ## ⚙️ 環境變數 (.env)
@@ -67,6 +81,7 @@ pnpm run build
 ### 2. 設備管理 (Equipment)
 *   **儀表板**: 支援關鍵字搜尋、類別篩選、狀態篩選與分頁。
 *   **詳情頁**: 顯示設備詳細資訊、當前持有者、QR Code、**目前位置**、**目標目的地**與歷史紀錄。
+    *   **注意**: `location` 與 `target_location` 欄位可為 `null`，前端需處理此情況。
 *   **管理介面**: Admin/Manager 可新增與編輯設備資料、指定目的地。
 
 ### 3. 借還與倉儲流程

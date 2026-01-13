@@ -8,7 +8,7 @@ import type { Equipment, Transaction } from '../../types';
 import { 
     ArrowLeft, Box, Activity, User as UserIcon, 
     History, MapPin, Move, X, Save, 
-    Camera, QrCode, CheckCircle, Truck
+    Camera, QrCode, CheckCircle, Truck, ClipboardList
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { EquipmentStatusBadge } from '../../components/Equipment/EquipmentStatusBadge';
@@ -16,28 +16,6 @@ import { LocationDisplay } from '../../components/Equipment/LocationDisplay';
 import { QRCodeSVG } from 'qrcode.react';
 import { QRCodeScannerModal } from '../../components/Scan/QRCodeScannerModal';
 import { compressImage } from '../../utils/imageCompression';
-
-const ClipboardList = ({ className }: { className?: string }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width="24" 
-    height="24" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
-    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-    <path d="M12 11h4"/>
-    <path d="M12 16h4"/>
-    <path d="M8 11h.01"/>
-    <path d="M8 16h.01"/>
-  </svg>
-);
 
 const LOCATION_ZONES = ['A區', 'B區', 'C區', 'D區', 'E區', 'F區', '其他'];
 const LOCATION_CABINETS = Array.from({ length: 10 }, (_, i) => `${i + 1}號櫃`).concat(['其他']);
@@ -425,7 +403,7 @@ export const EquipmentDetailPage = () => {
                 <History className="h-5 w-5 text-gray-400" /> <h3 className="text-sm font-bold text-gray-700 uppercase tracking-widest">歷史紀錄</h3>
             </div>
             <div className="divide-y divide-gray-50">
-                {(history as Transaction[] | undefined)?.length ? (history as Transaction[]).map((txn) => (
+                {(history as unknown as Transaction[] | undefined)?.length ? (history as unknown as Transaction[]).map((txn) => (
                     <div key={txn.id} className="p-5 flex gap-4 hover:bg-gray-50/50 transition-colors">
                         <div className="flex-shrink-0 mt-1">
                             <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${txn.action === 'BORROW' ? 'bg-blue-500' : txn.action === 'RETURN' ? 'bg-green-500' : txn.action.startsWith('MOVE') ? 'bg-orange-500' : 'bg-gray-300'}`} />

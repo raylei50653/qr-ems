@@ -58,9 +58,14 @@ uv run python manage.py createsuperuser
 ### 5. 執行測試 (Testing)
 建議在 Docker 環境中執行以確保環境一致性：
 ```bash
-# 在專案根目錄執行
-docker-compose exec backend uv run python manage.py test
+# 在專案根目錄執行 (使用 Docker Compose V2)
+docker compose exec backend uv run python manage.py test
 ```
+
+> **注意**: 
+> * 測試代碼應避免依賴手動創建的資料，盡量使用 Fixtures 或 Factory。
+> * 交易 (Transaction) 邏輯中，`reason` 欄位通常指使用者申請原因，而管理員的審核/拒絕理由應存於 `admin_note`。測試時請務必區分。
+> * 若遇到 `UnorderedObjectListWarning`，請檢查 ViewSet 的 `queryset` 是否已包含 `.order_by()`。
 
 ### 6. 生成測試資料
 ```bash

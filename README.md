@@ -40,8 +40,10 @@
 
 ### 1. 環境準備
 確保您的系統已安裝以下工具：
-*   **Docker** & **Docker Compose**
+*   **Docker** & **Docker Compose (V2)** (指令為 `docker compose`，非 `docker-compose`)
 *   **Make** (可選，用於簡化指令)
+*   **Node.js** >= 20 (若需本地開發前端)
+*   **pnpm** >= 10 (若需本地開發前端)
 
 ### 2. 設定環境變數
 請複製範例設定檔並填入您的參數：
@@ -79,7 +81,7 @@ make up     # 啟動所有服務 (Backend, Frontend, DB, Tunnel)
 ```bash
 make superuser
 # 或直接使用 Docker
-docker-compose exec backend uv run python manage.py createsuperuser
+docker compose exec backend uv run python manage.py createsuperuser
 ```
 
 ---
@@ -93,13 +95,29 @@ docker-compose exec backend uv run python manage.py createsuperuser
 
 ```bash
 # 執行所有後端測試
-docker-compose exec backend uv run python manage.py test
+docker compose exec backend uv run python manage.py test
 
 # 執行特定 App 的測試 (例如 equipment)
-docker-compose exec backend uv run python manage.py test apps.equipment
+docker compose exec backend uv run python manage.py test apps.equipment
 ```
 
 > **注意**: 若使用 `make test` 指令，請確保本地已正確安裝 Python 與 `uv` 環境，否則可能會因權限或路徑問題失敗。推薦優先使用 Docker 指令。
+
+---
+
+## 🔧 疑難排解 (Troubleshooting)
+
+### GitHub Actions CI 失敗: `docker-compose: command not found`
+這是因為 CI Runner 已棄用 Docker Compose V1 指令。請確保您的 Workflow 檔案或本地腳本使用 V2 指令 `docker compose` (中間無連字符)，本專案的 `Makefile` 與 `.github/workflows/ci.yml` 皆已更新為 V2 語法。
+
+### 前端依賴錯誤: Lockfile version mismatch
+本專案使用 **pnpm v10**。若您的 CI 或本地環境使用舊版 pnpm (如 v9)，可能會導致 lockfile 解析錯誤。請確保環境中安裝了正確版本的 pnpm：
+```bash
+npm install -g pnpm@latest
+```
+
+### Backend 分頁警告: `UnorderedObjectListWarning`
+若在測試或運行時看到此警告，表示 ViewSet 的 QuerySet 缺少 `.order_by()`。請檢查相關 ViewSet (如 `CategoryViewSet`) 是否已明確指定排序欄位。
 
 ---
 

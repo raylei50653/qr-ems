@@ -66,7 +66,7 @@ describe('LoginPage', () => {
     it('calls login api and navigates on success', async () => {
         // Mock successful login response
         const mockResponse = { access: 'fake-token', user: { id: 1, username: 'testuser' } };
-        vi.mocked(authApi.login).mockResolvedValue(mockResponse as unknown as ReturnType<typeof authApi.login>);
+        vi.mocked(authApi.login).mockResolvedValue(mockResponse as unknown as Awaited<ReturnType<typeof authApi.login>>);
 
         render(
             <MemoryRouter initialEntries={['/login']}>
