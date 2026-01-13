@@ -1,5 +1,7 @@
 from django.contrib import admin
+
 from .models import Location
+
 
 @admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
@@ -9,4 +11,5 @@ class LocationAdmin(admin.ModelAdmin):
 
     def full_path_display(self, obj):
         return str(obj)
+
     full_path_display.short_description = 'Full Path'

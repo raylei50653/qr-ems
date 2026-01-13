@@ -23,10 +23,11 @@ dependencies = [
     "boto3>=1.42.25",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.0",
     "coverage>=7.0",
+    "ruff>=0.9.0",
 ]
 
 [tool.coverage.run]
@@ -49,6 +50,14 @@ skip_empty = true
 # Target version
 target-version = "py312"
 line-length = 88
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    "migrations",
+    "__pycache__",
+    ".venv",
+    ".git",
+    "tests.py",
+]
 
 [tool.ruff.lint]
 # Enable Pyflakes (F) and Pycodestyle (E, W) codes by default.

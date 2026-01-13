@@ -1,8 +1,11 @@
 from rest_framework import serializers
-from .models import Transaction
-from apps.users.serializers import UserSerializer
+
 from apps.equipment.serializers import EquipmentSerializer
 from apps.locations.serializers import LocationSerializer
+from apps.users.serializers import UserSerializer
+
+from .models import Transaction
+
 
 class TransactionSerializer(serializers.ModelSerializer):
     user_detail = UserSerializer(source='user', read_only=True)
@@ -14,14 +17,33 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = [
-            'id', 'action', 'status', 'due_date', 'reason', 'admin_note', 'image',
-            'equipment', 'user', 'admin_verifier',
-            'location', 'location_details', 'zone', 'cabinet', 'number',
-            'user_detail', 'equipment_detail', 'admin_verifier_detail',
-            'created_at', 'updated_at'
+            'id',
+            'action',
+            'status',
+            'due_date',
+            'reason',
+            'admin_note',
+            'image',
+            'equipment',
+            'user',
+            'admin_verifier',
+            'location',
+            'location_details',
+            'zone',
+            'cabinet',
+            'number',
+            'user_detail',
+            'equipment_detail',
+            'admin_verifier_detail',
+            'created_at',
+            'updated_at',
         ]
-        read_only_fields = ['status', 'admin_verifier', 'user'] # Status managed via actions
-    
+        read_only_fields = [
+            'status',
+            'admin_verifier',
+            'user',
+        ]  # Status managed via actions
+
     def get_image(self, obj):
         if obj.image:
             return obj.image.url

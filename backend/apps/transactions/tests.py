@@ -1,9 +1,11 @@
-from django.test import TestCase
 from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
+from django.test import TestCase
 from rest_framework import status
-from apps.equipment.models import Equipment, Category
+from rest_framework.test import APIClient
+
+from apps.equipment.models import Category, Equipment
 from apps.locations.models import Location
+
 from .models import Transaction
 
 User = get_user_model()

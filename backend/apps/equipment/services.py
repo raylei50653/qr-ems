@@ -1,6 +1,8 @@
 from django.db import transaction
-from apps.transactions.models import Transaction
+
 from apps.equipment.models import Equipment
+from apps.transactions.models import Transaction
+
 
 def update_equipment_with_transaction(serializer, user, image=None):
     """
@@ -8,7 +10,7 @@ def update_equipment_with_transaction(serializer, user, image=None):
     if status or location changes.
     """
     instance = serializer.instance
-    
+
     # Capture old state before saving
     old_status = instance.status
     old_location = instance.location
@@ -25,31 +27,36 @@ def update_equipment_with_transaction(serializer, user, image=None):
         new_zone = updated_instance.zone
         new_cabinet = updated_instance.cabinet
         new_number = updated_instance.number
-        
+
         action_type = None
-        reason = ""
+        reason = ''
 
         # Status based transitions
         if old_status != new_status:
             if new_status == Equipment.Status.IN_TRANSIT:
                 action_type = 'MOVE_START'
-                reason = f"Status changed from {old_status} to {new_status}"
-            elif old_status == Equipment.Status.IN_TRANSIT and new_status == Equipment.Status.AVAILABLE:
+                reason = f'Status changed from {old_status} to {new_status}'
+            elif (
+                old_status == Equipment.Status.IN_TRANSIT
+                and new_status == Equipment.Status.AVAILABLE
+            ):
                 action_type = 'MOVE_CONFIRM'
-                reason = f"Status changed from {old_status} to {new_status}"
-        
+                reason = f'Status changed from {old_status} to {new_status}'
+
         # Location based transitions (Direct Move or Correction)
         # Only log if action_type is not yet set (to avoid double logging if covered by status change)
         if not action_type and new_status == Equipment.Status.AVAILABLE:
-            location_changed = (old_location != new_location) or \
-                               (old_zone != new_zone) or \
-                               (old_cabinet != new_cabinet) or \
-                               (old_number != new_number)
-            
+            location_changed = (
+                (old_location != new_location)
+                or (old_zone != new_zone)
+                or (old_cabinet != new_cabinet)
+                or (old_number != new_number)
+            )
+
             if location_changed:
-                action_type = 'MOVE_CONFIRM' # Treat direct location change as immediate move confirmation
-                reason = "Direct location update"
-        
+                action_type = 'MOVE_CONFIRM'  # Treat direct location change as immediate move confirmation
+                reason = 'Direct location update'
+
         if action_type:
             # Create a transaction record with location snapshot
             Transaction.objects.create(
@@ -62,7 +69,7 @@ def update_equipment_with_transaction(serializer, user, image=None):
                 zone=updated_instance.zone,
                 cabinet=updated_instance.cabinet,
                 number=updated_instance.number,
-                reason=reason
+                reason=reason,
             )
-            
+
     return updated_instance

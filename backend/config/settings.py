@@ -1,7 +1,8 @@
+from datetime import timedelta
 from pathlib import Path
-from decouple import config
+
 import dj_database_url
-import os
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -15,14 +16,17 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 SECRET_KEY = config('SECRET_KEY', default='')
 if not DEBUG and not SECRET_KEY:
     from django.core.exceptions import ImproperlyConfigured
-    raise ImproperlyConfigured("The SECRET_KEY setting must not be empty when DEBUG is False.")
+
+    raise ImproperlyConfigured(
+        'The SECRET_KEY setting must not be empty when DEBUG is False.'
+    )
 elif not SECRET_KEY:
     SECRET_KEY = 'django-insecure-dev-only-key'
 
 # ALLOWED_HOSTS parsing with better defaults
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 if not DEBUG and '*' in ALLOWED_HOSTS:
-    # Potentially dangerous in production, but we'll let it pass if explicitly set. 
+    # Potentially dangerous in production, but we'll let it pass if explicitly set.
     # Usually better to be strict.
     pass
 
@@ -36,13 +40,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     # Third-party
     'rest_framework',
     'drf_spectacular',
     'corsheaders',
     'storages',
-
     # Local
     'apps.users',
     'apps.equipment',
@@ -136,29 +138,29 @@ if USE_S3:
     AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL')
-    
+
     # R2 compatibility settings
     AWS_S3_SIGNATURE_VERSION = 's3v4'
     AWS_S3_REGION_NAME = 'auto'  # R2 uses 'auto'
-    AWS_S3_FILE_OVERWRITE = False # Ensure unique filenames
+    AWS_S3_FILE_OVERWRITE = False  # Ensure unique filenames
     AWS_QUERYSTRING_AUTH = False  # Disable signed URLs for public access
-    
+
     # Custom domain for public access (optional, if you have a custom domain on R2)
     AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN', default=None)
 
     STORAGES = {
-        "default": {
-            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-            "OPTIONS": {
-                "location": "media", # Store in 'media' folder within bucket
-                "default_acl": None, # R2 doesn't support ACLs
+        'default': {
+            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+            'OPTIONS': {
+                'location': 'media',  # Store in 'media' folder within bucket
+                'default_acl': None,  # R2 doesn't support ACLs
             },
         },
-        "staticfiles": {
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage", # Keep static files local/in container usually better for perf unless serving via CDN
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',  # Keep static files local/in container usually better for perf unless serving via CDN
         },
     }
-    
+
     if AWS_S3_CUSTOM_DOMAIN:
         MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
     else:
@@ -203,12 +205,12 @@ SPECTACULAR_SETTINGS = {
 }
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://qrems.raylei-lab.com",
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'https://qrems.raylei-lab.com',
 ]
 CSRF_TRUSTED_ORIGINS = [
-    "https://qrems.raylei-lab.com",
+    'https://qrems.raylei-lab.com',
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -230,7 +232,6 @@ else:
     X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # JWT Settings
-from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),

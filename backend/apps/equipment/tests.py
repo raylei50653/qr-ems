@@ -1,15 +1,17 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
-from rest_framework import status
-from django.core.files.uploadedfile import SimpleUploadedFile
 from io import BytesIO
+
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
 from PIL import Image
-from .models import Equipment, Category
+from rest_framework import status
+from rest_framework.test import APIClient
+
 from apps.transactions.models import Transaction
-from apps.locations.models import Location
-from .services import update_equipment_with_transaction
+
+from .models import Category, Equipment
 from .serializers import EquipmentSerializer
+from .services import update_equipment_with_transaction
 
 User = get_user_model()
 

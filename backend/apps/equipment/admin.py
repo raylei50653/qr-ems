@@ -1,14 +1,18 @@
 from django.contrib import admin
-from .models import Equipment, Attachment, Category
+
+from .models import Attachment, Category, Equipment
+
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'description', 'created_at')
     search_fields = ('name',)
 
+
 class AttachmentInline(admin.TabularInline):
     model = Attachment
     extra = 1
+
 
 @admin.register(Equipment)
 class EquipmentAdmin(admin.ModelAdmin):

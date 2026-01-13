@@ -1,6 +1,8 @@
 from io import BytesIO
-from PIL import Image
+
 from django.core.files.base import ContentFile
+from PIL import Image
+
 
 def compress_image(image_field, max_size=(1920, 1920), quality=70):
     """
@@ -11,7 +13,7 @@ def compress_image(image_field, max_size=(1920, 1920), quality=70):
 
     try:
         img = Image.open(image_field)
-        
+
         # Convert to RGB if necessary (e.g. for PNG with transparency)
         if img.mode in ('RGBA', 'P'):
             img = img.convert('RGB')
@@ -27,8 +29,8 @@ def compress_image(image_field, max_size=(1920, 1920), quality=70):
         # Update the image field with the compressed content
         # Change extension to .jpg
         new_name = image_field.name.rsplit('.', 1)[0] + '.jpg'
-        
+
         return ContentFile(output.read(), name=new_name)
     except Exception as e:
-        print(f"Error compressing image: {e}")
+        print(f'Error compressing image: {e}')
         return None

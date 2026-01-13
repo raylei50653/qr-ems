@@ -1,25 +1,30 @@
-import qrcode
 from io import BytesIO
+
+import qrcode
+from decouple import config
 from django.http import HttpResponse
-from rest_framework import viewsets, permissions, filters
+from rest_framework import filters, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Equipment, Category
-from .serializers import EquipmentSerializer, CategorySerializer
-from .services import update_equipment_with_transaction
-from apps.users.models import User
-from apps.transactions.serializers import TransactionSerializer
-from apps.transactions.models import Transaction
+
 from apps.locations.models import Location
-from decouple import config
+from apps.transactions.serializers import TransactionSerializer
+from apps.users.models import User
+
+from .models import Category, Equipment
+from .serializers import CategorySerializer, EquipmentSerializer
+from .services import update_equipment_with_transaction
+
 
 class IsManagerOrReadOnly(permissions.BasePermission):
-    def has_permission(self, request, view):
+    def has_permission(self, request, _view):
         if request.method in permissions.SAFE_METHODS:
             return True
         return request.user.is_authenticated and (
-            request.user.role in [User.Role.MANAGER, User.Role.ADMIN] or request.user.is_staff
+            request.user.role in [User.Role.MANAGER, User.Role.ADMIN]
+            or request.user.is_staff
         )
+
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all().order_by('id')
@@ -27,6 +32,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     permission_classes = [IsManagerOrReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
+
 
 class EquipmentViewSet(viewsets.ModelViewSet):
     queryset = Equipment.objects.all()
@@ -49,9 +55,7 @@ class EquipmentViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         image = self.request.FILES.get('transaction_image')
         update_equipment_with_transaction(
-            serializer=serializer,
-            user=self.request.user,
-            image=image
+            serializer=serializer, user=self.request.user, image=image
         )
 
     def get_queryset(self):
@@ -63,7 +67,7 @@ class EquipmentViewSet(viewsets.ModelViewSet):
         zone = self.request.query_params.get('zone')
         cabinet = self.request.query_params.get('cabinet')
         number = self.request.query_params.get('number')
-        
+
         if category:
             queryset = queryset.filter(category=category)
         if status:
@@ -90,23 +94,23 @@ class EquipmentViewSet(viewsets.ModelViewSet):
                 queryset = queryset.none()
         if target_location:
             queryset = queryset.filter(target_location__uuid=target_location)
-            
+
         return queryset
 
     @action(detail=True, methods=['get'])
-    def history(self, request, uuid=None):
+    def history(self, _request, _uuid=None):
         equipment = self.get_object()
         transactions = equipment.transactions.all().order_by('-created_at')
         serializer = TransactionSerializer(transactions, many=True)
         return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
-    def qr(self, request, uuid=None):
+    def qr(self, _request, _uuid=None):
         equipment = self.get_object()
         # Data to encode: URL to frontend scan page
         frontend_url = config('FRONTEND_URL', default='http://localhost:5173')
-        data = f"{frontend_url}/scan/{equipment.uuid}" 
-        
+        data = f'{frontend_url}/scan/{equipment.uuid}'
+
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -116,17 +120,19 @@ class EquipmentViewSet(viewsets.ModelViewSet):
         qr.add_data(data)
         qr.make(fit=True)
 
-        img = qr.make_image(fill_color="black", back_color="white")
+        img = qr.make_image(fill_color='black', back_color='white')
         buffer = BytesIO()
-        img.save(buffer, format="PNG")
-        
-        return HttpResponse(buffer.getvalue(), content_type="image/png")
+        img.save(buffer, format='PNG')
+
+        return HttpResponse(buffer.getvalue(), content_type='image/png')
 
     @action(detail=False, methods=['post'], url_path='bulk-delete')
     def bulk_delete(self, request):
         uuids = request.data.get('uuids', [])
         if not uuids:
             return Response({'detail': 'No UUIDs provided'}, status=400)
-        
+
         deleted_count, _ = Equipment.objects.filter(uuid__in=uuids).delete()
-        return Response({'detail': f'Successfully deleted {deleted_count} items'}, status=200)
+        return Response(
+            {'detail': f'Successfully deleted {deleted_count} items'}, status=200
+        )
