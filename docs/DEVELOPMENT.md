@@ -5,22 +5,25 @@
 ## 🛠️ 開發工具要求
 
 *   **Docker Compose:** 必須使用 V2 版本 (指令為 `docker compose`)。
-*   **前端套件管理:** 必須使用 **pnpm v10+**。
-*   **後端環境管理:** 推薦使用 **uv**。
+*   **Devbox:** 本專案推薦使用的沙盒開發環境 (替代傳統虛擬環境)。
+*   **前端套件管理:** 使用 **pnpm v10+**。
+*   **後端環境管理:** 使用 **uv**。
 
-## 🐳 容器化開發 (Dev Containers) - 強烈推薦
+---
 
-本專案支援 **VS Code Dev Containers**，這能確保所有開發者擁有一致的環境，無需在本地安裝 Python 或 Node.js。
+## 📦 沙盒開發環境 (Devbox) - 強烈推薦
+
+為了確保開發環境隔離且不汙染系統，建議使用 Devbox。
 
 ### 🚀 如何開始
-1.  安裝 **Docker Desktop** 與 **VS Code**。
-2.  在 VS Code 安裝 **Dev Containers** 擴充套件 (ms-vscode-remote.remote-containers)。
-3.  打開專案，點擊左下角的綠色按鈕 (><)，選擇 **"Reopen in Container"**。
-4.  等待構建完成，你將直接進入一個已設定好的開發環境。
+1.  **安裝 Devbox**: 執行 `curl -fsSL https://get.jetify.com/devbox | bash`。
+2.  **進入沙盒**: 在專案根目錄執行 `devbox shell`。
+3.  **初始化專案**: 執行 `run setup` (自動跑 uv sync 與 pnpm install)。
 
-### ⚡ 容器內指令
-*   **後端:** 直接在終端機執行 `uv run python manage.py runserver 0.0.0.0:8000`。
-*   **前端:** 進入 `/workspaces/qr-ems/frontend` (路徑視掛載而定)，執行 `pnpm dev`。
+### ⚡ 開發指令 (沙盒內)
+*   **啟動後端**: `run dev-back` 或 `cd backend && uv run python manage.py runserver`。
+*   **啟動前端**: `run dev-front` 或 `cd frontend && pnpm dev`。
+*   **執行測試**: `run test`。
 
 ---
 
