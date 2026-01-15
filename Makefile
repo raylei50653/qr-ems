@@ -22,6 +22,9 @@ help:
 	@echo "  make down       : 停止 Docker 服務"
 	@echo "  make logs       : 查看 Docker Log"
 	@echo "  make build      : 重新建置 Docker Image"
+	@echo "  make prod-up    : 啟動生產環境 (使用 docker-compose.prod.yml)"
+	@echo "  make prod-down  : 停止生產環境"
+	@echo "  make prod-build : 建置生產環境 Docker Image"
 
 install:
 	@echo ">>> Installing Backend dependencies (uv)..."
@@ -32,12 +35,12 @@ install:
 up:
 	@echo ">>> Starting Docker Services..."
 	docker-compose up -d
-	@echo ""
+	@@echo ""
 	@echo "Services are up!"
 	@echo "---------------------------------------------------"
 	@echo "Local Frontend: http://localhost:5173"
 	@echo "Local Backend:  http://localhost:8000"
-	@echo "Public URL:     https://qrems.raylei-lab.com"
+	@echo "Dev Public URL: https://dev-qrems.raylei-lab.com"
 	@echo "---------------------------------------------------"
 
 down:
@@ -97,3 +100,29 @@ gen-types:
 	@echo ">>> Generating Frontend TypeScript Types..."
 	cd $(FRONTEND_DIR) && pnpm gen:types
 	@echo ">>> Done! Types updated in $(FRONTEND_DIR)/src/types/api.ts"
+
+# Production commands
+prod-up:
+	@echo ">>> Starting Production Services..."
+	docker-compose -f docker-compose.prod.yml up -d
+	@echo "Production services are up!"
+	@echo "---------------------------------------------------"
+	@echo "Local Frontend: http://localhost"
+	@echo "Local Backend:  http://localhost:8000"
+	@echo "Public URL:     https://qrems.raylei-lab.com"
+	@echo "---------------------------------------------------"
+
+prod-down:
+	@echo ">>> Stopping Production Services..."
+	docker-compose -f docker-compose.prod.yml down
+
+prod-build:
+	@echo ">>> Building Production Services..."
+	docker-compose -f docker-compose.prod.yml build
+
+prod-logs:
+	docker-compose -f docker-compose.prod.yml logs -f
+
+prod-promote-user:
+	@read -p "Enter user email to promote: " email; \
+	docker-compose -f docker-compose.prod.yml exec backend uv run python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); u = User.objects.get(email='$$email'); u.is_superuser=True; u.is_staff=True; u.role='ADMIN'; u.save(); print(f'Successfully promoted {u.email} to ADMIN and Superuser')"
