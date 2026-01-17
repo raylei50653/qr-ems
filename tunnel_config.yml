@@ -3,7 +3,7 @@ tunnel: f2881b4d-72d0-466b-ae6c-44cbc0ba3ca0
 # This simplifies the tunnel configuration and ensures consistency.
 
 ingress:
-  - hostname: qrems.raylei-lab.com
-    service: http://frontend:5173
+  - hostname: dev-qrems.raylei-lab.com
+    service: http://frontend:80
   
   - service: http_status:404

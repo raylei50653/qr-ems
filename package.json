@@ -19,8 +19,8 @@
       "bash -c 'pnpm --prefix frontend tsc -b'"
     ],
     "backend/**/*.py": [
-      "bash -c 'cd backend && uv run ruff check --fix'",
-      "bash -c 'cd backend && uv run ruff format'"
+      "bash -c 'docker compose run --rm backend uv run ruff check --fix'",
+      "bash -c 'docker compose run --rm backend uv run ruff format'"
     ]
   },
   "devDependencies": {

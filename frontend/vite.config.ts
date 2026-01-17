@@ -14,12 +14,13 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: true,
-      port: 5173,
+      port: 80,
       watch: {
         ignored: ['**/.pnpm-store/**', '**/node_modules/**'],
       },
       allowedHosts: [
         'qrems.raylei-lab.com',
+        'dev-qrems.raylei-lab.com',
         'frontend'
       ],
       proxy: {

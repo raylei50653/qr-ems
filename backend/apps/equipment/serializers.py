@@ -94,4 +94,37 @@ class EquipmentSerializer(serializers.ModelSerializer):
             if field in data and (data[field] == '' or data[field] == 'null'):
                 data[field] = None
 
+        # Handle image field from FormData
+        if 'image' in data:
+            image = data['image']
+
+            # 1. Handle empty/null values
+            if (
+                image == ''
+                or image == 'null'
+                or hasattr(image, 'size')
+                and image.size == 0
+                or hasattr(image, 'name')
+                and not image.name
+            ):
+                data['image'] = None
+
+            # 2. Handle 'blob' filename without extension (common with frontend compression)
+            elif hasattr(image, 'name') and image.name == 'blob':
+                content_type = getattr(image, 'content_type', '')
+                extension = ''
+                if content_type == 'image/jpeg':
+                    extension = '.jpg'
+                elif content_type == 'image/png':
+                    extension = '.png'
+                elif content_type == 'image/webp':
+                    extension = '.webp'
+
+                if extension:
+                    image.name = f'upload{extension}'
+
+            # If still None, remove to avoid validation issues
+            if data['image'] is None:
+                del data['image']
+
         return super().to_internal_value(data)

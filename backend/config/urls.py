@@ -15,7 +15,7 @@ from rest_framework_simplejwt.views import (
 from apps.users.views import RegisterView  # Import RegisterView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('django_admin/', admin.site.urls),
     # API V1 Auth
     path('api/v1/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path(

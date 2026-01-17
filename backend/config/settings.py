@@ -167,12 +167,12 @@ if USE_S3:
         # Fallback to direct bucket URL or endpoint
         MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/media/'
 
-    STATIC_URL = 'static/'
+    STATIC_URL = '/static/'
     STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 else:
     # Local Storage
-    STATIC_URL = 'static/'
+    STATIC_URL = '/static/'
     STATIC_ROOT = BASE_DIR / 'staticfiles'
 
     MEDIA_URL = '/api/media/'
